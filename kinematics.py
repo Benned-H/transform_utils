@@ -85,7 +85,7 @@ class Quaternion:
     def to_euler_rpy(self) -> tuple[float, float, float]:
         """Convert the quaternion to Euler roll, pitch, and yaw angles.
 
-        :return: Tuple of (roll, pitch, yaw) angles (radians)
+        :return: Tuple of (roll, pitch, yaw) angles in radians
         """
         r, p, y = euler_from_quaternion(self.to_array())
         return (r, p, y)
@@ -115,7 +115,7 @@ class Pose3D:
 
     position: Point3D
     orientation: Quaternion
-    ref_frame: str = DEFAULT_FRAME  # Frame of reference in which the pose is expressed
+    ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
 
     @classmethod
     def identity(cls) -> Pose3D:
@@ -167,7 +167,7 @@ class Pose3D:
         return cls(position, orientation, ref_frame)
 
     def to_xyz_rpy(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        """Convert the pose into the corresponding (x,y,z) and (roll, pitch, yaw) tuples.
+        """Convert the pose into the corresponding (x, y, z) and (roll, pitch, yaw) tuples.
 
         :return: Pair of tuples (x, y, z) and (roll, pitch, yaw) with angles in radians
         """

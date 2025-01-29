@@ -63,7 +63,7 @@ class TransformManager:
     def tf_listener() -> TransformListener:
         """Retrieve the transform listener, initializing it if necessary.
 
-        :return: Transform listener used to request transforms from the TF2 server
+        :return: Transform listener used to receive transforms from the TF2 server
         """
         if TransformManager._tf_listener is None:
             tf_buffer = TransformManager.tf_buffer()
@@ -143,7 +143,7 @@ class TransformManager:
         Frames: Frame implied by the pose (p), current ref. frame (c), new ref. frame (n)
 
         :param pose_c_p: Pose (frame p) w.r.t. its current reference frame (frame c)
-        :param new_ref_frame: Reference frame of the returned pose
+        :param new_ref_frame: New reference frame (frame n) of the returned pose
         :return: Pose3D relative to the new reference frame (i.e., pose_n_p)
         """
         if pose_c_p.ref_frame == new_ref_frame:
