@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "transform_utils"
+version = "0.0.1"
+dependencies = []
+authors = [{ name = "Benned Hedegaard", email = "bhedegaa@cs.brown.edu" }]
+description = "Utility classes for representing and converting spatial transforms."
+readme = "README.md"
+license = { file = "LICENSE" }
