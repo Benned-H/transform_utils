@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 
 import rospy
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
+
 from transform_utils.kinematics_ros import pose_from_tf_stamped_msg, pose_to_tf_stamped_msg
 
 if TYPE_CHECKING:
     from geometry_msgs.msg import TransformStamped
+
     from transform_utils.kinematics import Pose3D
 
 
@@ -81,6 +83,37 @@ class TransformManager:
         tf_stamped_msg.header.stamp = rospy.Time.now()
 
         TransformManager.tf_broadcaster().sendTransform(tf_stamped_msg)
+
+    @staticmethod
+    def wait_for_transform(source_frame: str, target_frame: str) -> None:
+        """Wait until the specified transform is available on /tf.
+
+        Frame notation: Frame of some data (d), source frame (s), target frame (t).
+
+        Say our input data originates in the source frame: pose_s_d ("data in the source frame").
+        This function outputs transform_t_s ("source relative to target"), which lets us compute:
+
+            transform_t_s @ pose_s_d = pose_t_d ("data expressed in the target frame")
+
+        :param source_frame: Frame where the data originated
+        :param target_frame: Frame to which the data will be transformed
+        """
+        rate_hz = rospy.Rate(TransformManager.loop_hz)
+        rate_hz.sleep()
+
+        while not rospy.is_shutdown():
+            try:
+                TransformManager.tf_buffer().lookup_transform(
+                    target_frame=target_frame,
+                    source_frame=source_frame,
+                    time=rospy.Time.now(),
+                )
+                break
+            except TransformException:
+                rospy.logwarn(
+                    f"Waiting for transform from frame {source_frame} to {target_frame}...",
+                )
+                rate_hz.sleep()
 
     @staticmethod
     def lookup_transform(source_frame: str, target_frame: str, when: rospy.Time) -> Pose3D | None:
