@@ -18,11 +18,7 @@ from shape_msgs.msg import SolidPrimitive as SolidPrimitiveMsg
 from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros_utils import resolve_package_path
-from transform_utils.world_model.collision_object import (
-    CollisionObject,
-    CollisionObjectMsg,
-    ObjectDims,
-)
+from transform_utils.world_model.object_model import CollisionObject, ObjectModel
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -41,7 +37,7 @@ class EnvironmentData:
     """A struct representing an environment loaded from YAML."""
 
     base_poses: dict[str, Pose3D]  # Maps robot names to their initial base poses
-    objects: dict[str, CollisionObject]  # Maps object names to their collision models
+    objects: dict[str, ObjectModel]  # Maps object names to their geometric models
 
 
 def load_environment_from_yaml(yaml_path: Path) -> EnvironmentData:
@@ -94,25 +90,25 @@ def load_robot_base_poses(robots_data: dict[str, list[float]]) -> dict[str, Pose
     return base_poses
 
 
-def load_objects(objects_data: dict[str, dict[str, Any]]) -> dict[str, CollisionObject]:
+def load_objects(objects_data: dict[str, dict[str, Any]]) -> dict[str, ObjectModel]:
     """Load objects from data imported from YAML.
 
     :param objects_data: Dictionary mapping object names to object data
-    :returns: Dictionary mapping object names to CollisionObjects
+    :returns: Dictionary mapping object names to ObjectModels
     """
     return {name: load_object(name, data) for (name, data) in objects_data.items()}
 
 
-def load_object(object_name: str, object_data: dict[str, Any]) -> CollisionObject:
+def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
     """Load a collision object from its YAML data.
 
     Note: This method sets the CollisionObject message's `operation` field to ADD.
 
     :param object_name: Name of the object being loaded
     :param object_data: Dictionary mapping YAML field names to object data
-    :returns: Constructed CollisionObject
+    :returns: Constructed ObjectModel
     """
-    collision_object_msg = CollisionObjectMsg()
+    collision_object_msg = CollisionObject()
 
     # Initialize the object's pose if it's specified in the YAML data
     pose_data = object_data.get("pose")
@@ -175,14 +171,16 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> CollisionObjec
             collision_object_msg.subframe_names.append(subframe_name)
             collision_object_msg.subframe_poses.append(subframe_pose)
 
-    collision_object_msg.operation = CollisionObjectMsg.ADD
+    collision_object_msg.operation = CollisionObject.ADD
 
     rospy.loginfo(f"Loaded object named '{collision_object_msg.id}' within load_object()...")
 
-    return CollisionObject(collision_object_msg, pose, object_dims)
+    return ObjectModel(collision_object_msg, pose, object_dims)
 
 
-def load_solid_primitive(primitive_data: dict[str, Any]) -> tuple[SolidPrimitiveMsg, ObjectDims]:
+def load_solid_primitive(
+    primitive_data: dict[str, Any],
+) -> tuple[SolidPrimitiveMsg, tuple[float, float, float]]:
     """Load a shape_msgs/SolidPrimitive message and its dimensions from YAML data.
 
     These primitives include boxes, spheres, cylinders, and cones. The SolidPrimitive
