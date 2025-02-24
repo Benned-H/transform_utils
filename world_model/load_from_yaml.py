@@ -1,31 +1,29 @@
-"""Define functions for loading collision meshes from file."""
+"""Define functions for loading object and environment models from YAML."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+import geometry_msgs.msg
 import numpy as np
 import rospy
+import shape_msgs.msg
 import trimesh
 import yaml
-from geometry_msgs.msg import Point as PointMsg
-from geometry_msgs.msg import Pose as PoseMsg
-from shape_msgs.msg import Mesh as MeshMsg
-from shape_msgs.msg import MeshTriangle as MeshTriangleMsg
-from shape_msgs.msg import SolidPrimitive as SolidPrimitiveMsg
+from moveit_msgs.msg import CollisionObject
 
 from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros_utils import resolve_package_path
-from transform_utils.world_model.object_model import CollisionObject, ObjectModel
+from transform_utils.world_model.object_model import ObjectModel
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 class ImportedMeshTypeError(Exception):
-    """An error reflecting an unexpected mesh type during a Trimesh import."""
+    """An error caused by an unexpected mesh type during a Trimesh import."""
 
     def __init__(self, mesh_path: Path, mesh_type: type):
         """Initialize the error with the path and type of the imported mesh."""
@@ -33,59 +31,52 @@ class ImportedMeshTypeError(Exception):
 
 
 @dataclass
-class EnvironmentData:
-    """A struct representing an environment loaded from YAML."""
+class EnvironmentModel:
+    """An environment model loaded from YAML."""
 
     base_poses: dict[str, Pose3D]  # Maps robot names to their initial base poses
     objects: dict[str, ObjectModel]  # Maps object names to their geometric models
 
 
-def load_environment_from_yaml(yaml_path: Path) -> EnvironmentData:
-    """Load an environment's data from the given YAML file.
+def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
+    """Load an environment model from the given YAML file.
 
-    :param yaml_path: Path to the YAML file containing environment data
-    :returns: Environment data consisting of loaded robot poses and objects
+    :param yaml_path: Path to the YAML file containing an environment model
+    :return: Environment model consisting of loaded robot poses and objects
     """
-    env_data = EnvironmentData({}, {})
+    env = EnvironmentModel({}, {})
 
     if not yaml_path.exists():
         rospy.logerr(f"The YAML path {yaml_path} doesn't exist!")
-        return env_data
+        return env
 
     try:
         with yaml_path.open() as yaml_file:
             yaml_data = yaml.safe_load(yaml_file)
             rospy.loginfo(f"Loaded environment data from YAML file: {yaml_path}")
     except yaml.YAMLError as error:
-        rospy.logerr(f"Failed to load YAML file: {yaml_path}.\nError: {error}")
-        return env_data
+        rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
+        return env
 
     if "robot_base_poses" in yaml_data:
-        env_data.base_poses = load_robot_base_poses(yaml_data["robot_base_poses"])
+        env.base_poses = load_robot_base_poses(yaml_data["robot_base_poses"])
 
     if "objects" in yaml_data:
-        env_data.objects = load_objects(yaml_data["objects"])
+        env.objects = load_objects(yaml_data["objects"])
 
-    return env_data
+    return env
 
 
 def load_robot_base_poses(robots_data: dict[str, list[float]]) -> dict[str, Pose3D]:
     """Load robots' initial base poses from data imported from YAML.
 
     :param robots_data: Map from robot names to base poses (lists of XYZ RPY floats)
-    :returns: Map from robot names to robot base poses (Pose3D objects)
+    :return: Map from robot names to robot base poses represented as Pose3Ds
     """
     base_poses: dict[str, Pose3D] = {}
 
     for robot_name, base_pose_list in robots_data.items():
-        len_xyz_rpy = 6  # Expected length of an XYZ-RPY list
-        assert len(base_pose_list) == len_xyz_rpy, (
-            f"Base pose of robot '{robot_name}' had length {len(base_pose_list)}"
-        )
-
-        x, y, z, roll, pitch, yaw = base_pose_list
-
-        base_poses[robot_name] = Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, DEFAULT_FRAME)
+        base_poses[robot_name] = Pose3D.from_list(base_pose_list, DEFAULT_FRAME)
 
     return base_poses
 
@@ -94,19 +85,19 @@ def load_objects(objects_data: dict[str, dict[str, Any]]) -> dict[str, ObjectMod
     """Load objects from data imported from YAML.
 
     :param objects_data: Dictionary mapping object names to object data
-    :returns: Dictionary mapping object names to ObjectModels
+    :return: Dictionary mapping object names to object models
     """
     return {name: load_object(name, data) for (name, data) in objects_data.items()}
 
 
 def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
-    """Load a collision object from its YAML data.
+    """Load an object model from data imported from YAML.
 
-    Note: This method sets the CollisionObject message's `operation` field to ADD.
+    Note: This method sets the stored CollisionObject message's `operation` field to ADD.
 
     :param object_name: Name of the object being loaded
     :param object_data: Dictionary mapping YAML field names to object data
-    :returns: Constructed ObjectModel
+    :return: Constructed ObjectModel
     """
     collision_object_msg = CollisionObject()
 
@@ -115,20 +106,20 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
     ref_frame = object_data.get("frame", DEFAULT_FRAME)
     collision_object_msg.header.frame_id = ref_frame
 
-    pose = None if pose_data is None else Pose3D.from_list(pose_data, ref_frame)
-
-    if pose_data is not None:
+    # If no pose is provided, default the ROS message to the identity pose in the default frame
+    if pose_data is None:
+        pose = None
+        collision_object_msg.pose = pose_to_msg(Pose3D.identity())
+    else:
+        pose = Pose3D.from_list(pose_data, ref_frame)
         collision_object_msg.pose = pose_to_msg(pose)
-    else:  # Default ROS message pose: Identity pose in the default frame
-        identity_pose = Pose3D.identity()
-        collision_object_msg.pose = pose_to_msg(identity_pose)
 
     collision_object_msg.id = object_name
 
     object_type = object_data["type"]
     collision_object_msg.type.key = object_type  # Ignore 'db' field of message
 
-    # Verify that the object uses either a solid primitive geometry or a mesh
+    # Verify that the object's geometry is specified either as a solid primitive or as a mesh
     assert "mesh" in object_data or "geometry" in object_data
 
     if "mesh" in object_data:
@@ -137,7 +128,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
         # Resolve the mesh's package-relative filepath as an absolute path
         mesh_path = resolve_package_path(relative_mesh_path)
         assert mesh_path is not None, (
-            f"Could not resolve the package-relative path: {relative_mesh_path}."
+            f"Could not resolve the package-relative path: {relative_mesh_path}"
         )
 
         mesh_steps = object_data["mesh"]["steps"]  # Steps to process the mesh
@@ -146,7 +137,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
 
         # Set the mesh pose to the identity pose so that object frame = mesh frame
         collision_object_msg.meshes = [trimesh_to_msg(loaded_trimesh)]
-        collision_object_msg.mesh_poses = [PoseMsg()]
+        collision_object_msg.mesh_poses = [geometry_msgs.msg.Pose()]
 
         # Find object dimensions using the imported mesh
         min_bounds, max_bounds = loaded_trimesh.bounds
@@ -162,7 +153,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
         pose_o_g = Pose3D.from_xyz_rpy(z=height_m / 2.0)
         collision_object_msg.primitive_poses.append(pose_to_msg(pose_o_g))
 
-    # Create any subframes, if they exist
+    # Create any subframes specified in the YAML data
     subframes = object_data.get("subframes", [])
     for subframe_name in subframes:
         if subframe_name == "top":
@@ -173,14 +164,14 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
 
     collision_object_msg.operation = CollisionObject.ADD
 
-    rospy.loginfo(f"Loaded object named '{collision_object_msg.id}' within load_object()...")
+    rospy.loginfo(f"Loaded object named '{object_name}' within load_object()...")
 
     return ObjectModel(collision_object_msg, pose, object_dims)
 
 
 def load_solid_primitive(
     primitive_data: dict[str, Any],
-) -> tuple[SolidPrimitiveMsg, tuple[float, float, float]]:
+) -> tuple[shape_msgs.msg.SolidPrimitive, tuple[float, float, float]]:
     """Load a shape_msgs/SolidPrimitive message and its dimensions from YAML data.
 
     These primitives include boxes, spheres, cylinders, and cones. The SolidPrimitive
@@ -191,20 +182,20 @@ def load_solid_primitive(
     :param primitive_data: Dictionary mapping YAML field names to shape data
     :return: Tuple containing a SolidPrimitive message and the object's dimensions
     """
-    msg = SolidPrimitiveMsg()
+    msg = shape_msgs.msg.SolidPrimitive()
     msg.dimensions = primitive_data["dims"]
     shape_type = primitive_data["type"]
 
     if shape_type == "box":
-        msg.type = SolidPrimitiveMsg.BOX
+        msg.type = shape_msgs.msg.SolidPrimitive.BOX
         expected_dims = 3  # Box primitive dimensions: [x, y, z]
 
     elif shape_type == "cylinder":
-        msg.type = SolidPrimitiveMsg.CYLINDER
+        msg.type = shape_msgs.msg.SolidPrimitive.CYLINDER
         expected_dims = 2  # Cylinder primitive dimensions: [height, radius] (centered on z-axis)
 
     elif shape_type == "sphere":
-        msg.type = SolidPrimitiveMsg.SPHERE
+        msg.type = shape_msgs.msg.SolidPrimitive.SPHERE
         expected_dims = 1  # Sphere primitive dimensions: [radius] (centered on origin)
 
     actual_dims = len(msg.dimensions)
@@ -212,34 +203,33 @@ def load_solid_primitive(
 
     if shape_type == "box":
         shape_dims = (
-            msg.dimensions[SolidPrimitiveMsg.BOX_X],
-            msg.dimensions[SolidPrimitiveMsg.BOX_Y],
-            msg.dimensions[SolidPrimitiveMsg.BOX_Z],
+            msg.dimensions[shape_msgs.msg.SolidPrimitive.BOX_X],
+            msg.dimensions[shape_msgs.msg.SolidPrimitive.BOX_Y],
+            msg.dimensions[shape_msgs.msg.SolidPrimitive.BOX_Z],
         )
     elif shape_type == "cylinder":
         shape_dims = (
-            2.0 * msg.dimensions[SolidPrimitiveMsg.CYLINDER_RADIUS],
-            2.0 * msg.dimensions[SolidPrimitiveMsg.CYLINDER_RADIUS],
-            msg.dimensions[SolidPrimitiveMsg.CYLINDER_HEIGHT],
+            2.0 * msg.dimensions[shape_msgs.msg.SolidPrimitive.CYLINDER_RADIUS],
+            2.0 * msg.dimensions[shape_msgs.msg.SolidPrimitive.CYLINDER_RADIUS],
+            msg.dimensions[shape_msgs.msg.SolidPrimitive.CYLINDER_HEIGHT],
         )
     elif shape_type == "sphere":
         shape_dims = (
-            2.0 * msg.dimensions[SolidPrimitiveMsg.SPHERE_RADIUS],
-            2.0 * msg.dimensions[SolidPrimitiveMsg.SPHERE_RADIUS],
-            2.0 * msg.dimensions[SolidPrimitiveMsg.SPHERE_RADIUS],
+            2.0 * msg.dimensions[shape_msgs.msg.SolidPrimitive.SPHERE_RADIUS],
+            2.0 * msg.dimensions[shape_msgs.msg.SolidPrimitive.SPHERE_RADIUS],
+            2.0 * msg.dimensions[shape_msgs.msg.SolidPrimitive.SPHERE_RADIUS],
         )
 
     return (msg, shape_dims)
 
 
-def load_trimesh(mesh_path: Path, import_steps: list, visualize: bool = False) -> trimesh.Trimesh:
+def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Trimesh:
     """Load an object's mesh from file.
 
     During import, the operations prescribed by "steps" are applied to the mesh.
 
     :param mesh_path: Path to the mesh file to be imported
     :param import_steps: Sequence of geometric operations applied to the mesh (e.g., "center_xy")
-    :param visualize: Optional flag to visualize the loaded mesh (defaults to False)
     :return: Normalized mesh imported using the trimesh library
     """
     mesh = trimesh.load(mesh_path, force="mesh")
@@ -272,17 +262,19 @@ def load_trimesh(mesh_path: Path, import_steps: list, visualize: bool = False) -
         else:
             raise ValueError(f"Unknown mesh processing step: '{step}'")
 
+    mesh.show()
+
     return mesh
 
 
-def trimesh_to_msg(mesh: trimesh.Trimesh) -> MeshMsg:
+def trimesh_to_msg(mesh: trimesh.Trimesh) -> shape_msgs.msg.Mesh:
     """Convert a trimesh.Trimesh into a shape_msgs/Mesh message.
 
     :param mesh: Object containing a 3D triangle mesh
-    :returns: A shape_msgs/Mesh message containing the mesh geometry
+    :return: A shape_msgs/Mesh message containing the mesh geometry
     """
-    mesh_msg = MeshMsg()
-    mesh_msg.triangles = [MeshTriangleMsg(vertex_indices=list(tri)) for tri in mesh.faces]
-    mesh_msg.vertices = [PointMsg(v[0], v[1], v[2]) for v in mesh.vertices]
+    mesh_msg = shape_msgs.msg.Mesh()
+    mesh_msg.triangles = [shape_msgs.msg.MeshTriangle(list(tri)) for tri in mesh.faces]
+    mesh_msg.vertices = [geometry_msgs.msg.Point(v[0], v[1], v[2]) for v in mesh.vertices]
 
     return mesh_msg

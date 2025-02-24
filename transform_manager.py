@@ -6,10 +6,12 @@ from typing import TYPE_CHECKING
 
 import rospy
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
+
 from transform_utils.kinematics_ros import pose_from_tf_stamped_msg, pose_to_tf_stamped_msg
 
 if TYPE_CHECKING:
     from geometry_msgs.msg import TransformStamped
+
     from transform_utils.kinematics import Pose3D
 
 
@@ -17,7 +19,6 @@ class TransformManager:
     """A static class used to manage and read from the /tf tree."""
 
     loop_hz = 10.0  # Frequency (Hz) of any transform request/send loops
-    lookup_timeout_s = 5.0  # Duration (seconds) after which to abandon a transform lookup
 
     # Delay initialization of TF2 objects until ROS is available
     _tf_broadcaster: TransformBroadcaster | None = None
@@ -83,7 +84,12 @@ class TransformManager:
         TransformManager.tf_broadcaster().sendTransform(tf_stamped_msg)
 
     @staticmethod
-    def lookup_transform(source_frame: str, target_frame: str, when: rospy.Time) -> Pose3D | None:
+    def lookup_transform(
+        source_frame: str,
+        target_frame: str,
+        when: rospy.Time | None = None,
+        timeout_s: float = 5.0,
+    ) -> Pose3D | None:
         """Look up the transform to convert from one frame to another using /tf.
 
         Frame notation: Frame of some data (d), source frame (s), target frame (t).
@@ -95,19 +101,23 @@ class TransformManager:
 
         :param source_frame: Frame where the data originated
         :param target_frame: Frame to which the data will be transformed
-        :param when: Timestamp at which the relative transform is found
+        :param when: Timestamp at which the relative transform is found (defaults to 'now')
+        :param timeout_s: Duration (seconds) after which to abandon the lookup (defaults to 5)
         :return: Pose3D representing transform (i.e., transform_t_s) or None (if lookup failed)
         """
+        if when is None:
+            when = rospy.Time.now()
+
         rate_hz = rospy.Rate(TransformManager.loop_hz)
         rate_hz.sleep()
 
         start_time_s = rospy.get_time()  # Start time as float seconds
-        timeout_time_s = start_time_s + TransformManager.lookup_timeout_s
+        timeout_time_s = start_time_s + timeout_s
 
-        tf_stamped_msg = None
+        tf_stamped_msg: TransformStamped | None = None
         while (rospy.get_time() < timeout_time_s) and (not rospy.is_shutdown_requested()):
             try:
-                tf_stamped_msg: TransformStamped = TransformManager.tf_buffer().lookup_transform(
+                tf_stamped_msg = TransformManager.tf_buffer().lookup_transform(
                     target_frame=target_frame,
                     source_frame=source_frame,
                     time=when,
@@ -116,8 +126,8 @@ class TransformManager:
                 break
             except TransformException as t_exc:
                 rospy.logwarn(
-                    f"[TransformManager.lookup_transform] Looking for {source_frame} to "
-                    f"{target_frame} at time {when.to_time():.2f} gave exception: {t_exc}",
+                    f"[TransformManager.lookup_transform] Looking for '{source_frame}' to "
+                    f"'{target_frame}' at time {when.to_time():.2f} gave exception: {t_exc}",
                 )
                 rate_hz.sleep()
 
@@ -150,6 +160,6 @@ class TransformManager:
             return pose_c_p
 
         now = rospy.Time.now()
-        pose_n_c = TransformManager.lookup_transform(pose_c_p.ref_frame, new_ref_frame, now)
+        pose_n_c = TransformManager.lookup_transform(pose_c_p.ref_frame, new_ref_frame, now, 60.0)
 
         return pose_n_c @ pose_c_p
