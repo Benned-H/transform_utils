@@ -15,8 +15,9 @@ from moveit_msgs.msg import CollisionObject
 
 from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
-from transform_utils.ros_utils import resolve_package_path
+from transform_utils.ros.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
+from transform_utils.world_model.pose_estimate import PoseEstimate3D
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -106,15 +107,22 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
     ref_frame = object_data.get("frame", DEFAULT_FRAME)
     collision_object_msg.header.frame_id = ref_frame
 
+    collision_object_msg.id = object_name
+
+    static = object_data.get("static", False)
+    print(f"Whether {object_name} is static was loaded as: {static} of type {type(static)}")
+
     # If no pose is provided, default the ROS message to the identity pose in the default frame
     if pose_data is None:
-        pose = None
+        estimated_pose = PoseEstimate3D()
         collision_object_msg.pose = pose_to_msg(Pose3D.identity())
     else:
         pose = Pose3D.from_list(pose_data, ref_frame)
         collision_object_msg.pose = pose_to_msg(pose)
 
-    collision_object_msg.id = object_name
+        # Allow pose estimates to override the initial pose of a non-static object
+        initial_confidence = 100 if static else 0
+        estimated_pose = PoseEstimate3D(pose, initial_confidence)
 
     object_type = object_data["type"]
     collision_object_msg.type.key = object_type  # Ignore 'db' field of message
@@ -166,7 +174,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
 
     rospy.loginfo(f"Loaded object named '{object_name}' within load_object()...")
 
-    return ObjectModel(collision_object_msg, pose, object_dims)
+    return ObjectModel(collision_object_msg, estimated_pose, object_dims, static)
 
 
 def load_solid_primitive(
