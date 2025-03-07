@@ -29,6 +29,16 @@ class Point3D:
         """Construct a Point3D corresponding to the identity translation."""
         return Point3D(0, 0, 0)
 
+    def to_array(self) -> np.ndarray:
+        """Convert the 3D point to a NumPy array."""
+        return np.array([self.x, self.y, self.z])
+
+    @classmethod
+    def from_array(cls, arr: np.ndarray) -> Point3D:
+        """Construct a Point3D from a NumPy array."""
+        assert arr.shape == (3,), "Point3D must be a three-element vector."
+        return cls(arr[0], arr[1], arr[2])
+
 
 @dataclass
 class Quaternion:

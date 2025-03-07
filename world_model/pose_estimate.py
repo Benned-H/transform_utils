@@ -5,26 +5,49 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from transform_utils.kinematics import Pose3D
+from transform_utils.math.average_3d import compute_average_pose
 
 
 @dataclass
 class PoseEstimate3D:
-    """An object pose estimate with a confidence quantity."""
+    """An object pose estimate with an associated confidence value."""
 
-    estimated_pose: Pose3D | None = None  # None if no estimate has been received
-    confidence: float = 0.0  # Confidence value associated with the stored pose estimate
+    pose: Pose3D
+    confidence: float = 0.0  # Confidence associated with this estimate
 
-    def update_estimate(self, new_pose: Pose3D, new_confidence: float) -> None:
-        """Update the stored estimate based on the given pose estimate.
 
-        :param new_pose: A new pose estimate to integrate into the stored estimate
-        :param new_confidence: Confidence value associated with the given pose
+class AggregatePoseEstimate3D:
+    """An object pose estimate based on multiple aggregated estimates."""
+
+    def __init__(self) -> None:
+        """Initialize the storage member variables of the PoseEstimate3D."""
+        self._estimates: set[PoseEstimate3D]
+
+    def update(self, new_estimate: PoseEstimate3D) -> None:
+        """Update the combined estimate using the given pose estimate.
+
+        :param new_estimate: New pose estimate to integrate into the combined estimate
         """
-        if new_confidence > self.confidence:  # Keep the most confident of the estimates
-            self.estimated_pose = new_pose
-            self.confidence = new_confidence
+        self._estimates.add(new_estimate)
 
     @property
     def unknown(self) -> bool:
         """Return whether the estimated pose is currently unknown."""
-        return (self.estimated_pose is None) or (self.confidence <= 0.0)
+        max_confidence = max([e.confidence for e in self._estimates], default=0.0)
+        return max_confidence <= 0.0
+
+    @property
+    def estimated_pose(self) -> Pose3D | None:
+        """Compute the aggregate estimated pose based on the stored estimates.
+
+        Note: Currently uses an average of the stored estimates.
+
+        :return: Estimated pose based on the available data
+        """
+        if not self._estimates:
+            return None
+
+        # For now, ignore the confidence of the pose estimates. It could be used to weight them
+        poses = [est.pose for est in self._estimates]
+
+        return compute_average_pose(poses, weights=None)
