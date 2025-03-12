@@ -17,7 +17,7 @@ from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
-from transform_utils.world_model.pose_estimate import PoseEstimate3D
+from transform_utils.world_model.world_objects import PoseEstimateT, WorldObjects
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -36,7 +36,7 @@ class EnvironmentModel:
     """An environment model loaded from YAML."""
 
     base_poses: dict[str, Pose3D]  # Maps robot names to their initial base poses
-    objects: dict[str, ObjectModel]  # Maps object names to their geometric models
+    world_objects: WorldObjects  # Stores object models and their estimated poses
 
 
 def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
@@ -63,7 +63,7 @@ def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
         env.base_poses = load_robot_base_poses(yaml_data["robot_base_poses"])
 
     if "objects" in yaml_data:
-        env.objects = load_objects(yaml_data["objects"])
+        env.world_objects = load_objects(yaml_data["objects"])
 
     return env
 
@@ -82,23 +82,33 @@ def load_robot_base_poses(robots_data: dict[str, list[float]]) -> dict[str, Pose
     return base_poses
 
 
-def load_objects(objects_data: dict[str, dict[str, Any]]) -> dict[str, ObjectModel]:
+def load_objects(objects_data: dict[str, dict[str, Any]]) -> WorldObjects[PoseEstimateT]:
     """Load objects from data imported from YAML.
 
     :param objects_data: Dictionary mapping object names to object data
-    :return: Dictionary mapping object names to object models
+    :return: Dataclass storing object models and their estimated poses
     """
-    return {name: load_object(name, data) for (name, data) in objects_data.items()}
+    world_objects = WorldObjects({}, {})
+    for name, data in objects_data.items():
+        object_model, pose = load_object(name, data)
+        world_objects.objects[name] = object_model
+
+        # Initialize each pose estimate using only the AbstractPoseEstimate interface
+        world_objects.pose_estimates[name] = PoseEstimateT()
+        confidence = 100 if object_model.static else 0
+        world_objects.pose_estimates[name].update(pose, confidence)
+
+    return world_objects
 
 
-def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
-    """Load an object model from data imported from YAML.
+def load_object(object_name: str, object_data: dict[str, Any]) -> tuple[ObjectModel, Pose3D | None]:
+    """Load an object model and 3D pose from data imported from YAML.
 
     Note: This method sets the stored CollisionObject message's `operation` field to ADD.
 
     :param object_name: Name of the object being loaded
     :param object_data: Dictionary mapping YAML field names to object data
-    :return: Constructed ObjectModel
+    :return: Constructed ObjectModel and initial object pose (or None if no pose is available)
     """
     collision_object_msg = CollisionObject()
 
@@ -114,15 +124,11 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
 
     # If no pose is provided, default the ROS message to the identity pose in the default frame
     if pose_data is None:
-        estimated_pose = PoseEstimate3D()
+        pose = None
         collision_object_msg.pose = pose_to_msg(Pose3D.identity())
     else:
         pose = Pose3D.from_list(pose_data, ref_frame)
         collision_object_msg.pose = pose_to_msg(pose)
-
-        # Allow pose estimates to override the initial pose of a non-static object
-        initial_confidence = 100 if static else 0
-        estimated_pose = PoseEstimate3D(pose, initial_confidence)
 
     object_type = object_data["type"]
     collision_object_msg.type.key = object_type  # Ignore 'db' field of message
@@ -174,7 +180,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
 
     rospy.loginfo(f"Loaded object named '{object_name}' within load_object()...")
 
-    return ObjectModel(collision_object_msg, estimated_pose, object_dims, static)
+    return ObjectModel(collision_object_msg, object_dims, static), pose
 
 
 def load_solid_primitive(

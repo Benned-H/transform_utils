@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Generic, TypeVar
 
 import rospy
-from std_srvs.srv import Trigger, TriggerResponse
+from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 
 RequestT = TypeVar("RequestT")  # Service request message type (e.g., `AddTwoIntsRequest`)
 ResponseT = TypeVar("ResponseT")  # Service response message type (e.g., `AddTwoIntsResponse`)
@@ -53,6 +53,25 @@ class ServiceCaller(Generic[RequestT, ResponseT]):
         :return: Response from the service, or None if the call fails
         """
         return self.call_service(request)
+
+
+class WaitForServiceCall:
+    """A class that loops until its ROS service has been called."""
+
+    def __init__(self, topic_name: str, loop_freq_hz: float = 10) -> None:
+        """Initialize a member variable and then spin."""
+        self.keep_looping = True
+        self.service = rospy.Service(topic_name, Trigger, self.handle_trigger)
+        rospy.loginfo(f"Now waiting for call to the service '{topic_name}'...")
+
+        rate_hz = rospy.Rate(loop_freq_hz)  # Loop at the given frequency (Hz)
+        while self.keep_looping:
+            rate_hz.sleep()
+
+    def handle_trigger(self, _: TriggerRequest) -> TriggerResponse:
+        """Handle a request to break from the class loop."""
+        self.keep_looping = False
+        return TriggerResponse(success=True, message="Breaking from loop...")
 
 
 def trigger_service(service_name: str) -> bool:
