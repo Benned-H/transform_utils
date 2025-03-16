@@ -17,7 +17,6 @@ from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
-from transform_utils.world_model.world_objects import PoseEstimateT, WorldObjects
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -32,11 +31,29 @@ class ImportedMeshTypeError(Exception):
 
 
 @dataclass
+class ObjectDataYAML:
+    """A dataclass to store data about an object loaded from YAML."""
+
+    model: ObjectModel
+    pose: Pose3D | None
+
+
+@dataclass
 class EnvironmentModel:
     """An environment model loaded from YAML."""
 
     base_poses: dict[str, Pose3D]  # Maps robot names to their initial base poses
-    world_objects: WorldObjects  # Stores object models and their estimated poses
+    objects: dict[str, ObjectDataYAML]  # Maps object names to their models and initial poses
+
+
+def load_known_object_names_from_yaml(yaml_path: Path) -> list[str]:
+    """Load the list of known object names from the given YAML file.
+
+    :param yaml_path: Path to the YAML file containing an environment model
+    :return: List of names of the known objects in the environment
+    """
+    env = load_environment_from_yaml(yaml_path)
+    return list(env.objects.keys())
 
 
 def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
@@ -63,7 +80,7 @@ def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
         env.base_poses = load_robot_base_poses(yaml_data["robot_base_poses"])
 
     if "objects" in yaml_data:
-        env.world_objects = load_objects(yaml_data["objects"])
+        env.objects = load_objects(yaml_data["objects"])
 
     return env
 
@@ -82,26 +99,16 @@ def load_robot_base_poses(robots_data: dict[str, list[float]]) -> dict[str, Pose
     return base_poses
 
 
-def load_objects(objects_data: dict[str, dict[str, Any]]) -> WorldObjects[PoseEstimateT]:
+def load_objects(objects_data: dict[str, dict[str, Any]]) -> dict[str, ObjectDataYAML]:
     """Load objects from data imported from YAML.
 
     :param objects_data: Dictionary mapping object names to object data
     :return: Dataclass storing object models and their estimated poses
     """
-    world_objects = WorldObjects({}, {})
-    for name, data in objects_data.items():
-        object_model, pose = load_object(name, data)
-        world_objects.objects[name] = object_model
-
-        # Initialize each pose estimate using only the AbstractPoseEstimate interface
-        world_objects.pose_estimates[name] = PoseEstimateT()
-        confidence = 100 if object_model.static else 0
-        world_objects.pose_estimates[name].update(pose, confidence)
-
-    return world_objects
+    return {name: load_object(name, object_data) for name, object_data in objects_data.items()}
 
 
-def load_object(object_name: str, object_data: dict[str, Any]) -> tuple[ObjectModel, Pose3D | None]:
+def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectDataYAML:
     """Load an object model and 3D pose from data imported from YAML.
 
     Note: This method sets the stored CollisionObject message's `operation` field to ADD.
@@ -177,10 +184,11 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> tuple[ObjectMo
             collision_object_msg.subframe_poses.append(subframe_pose)
 
     collision_object_msg.operation = CollisionObject.ADD
+    object_model = ObjectModel(collision_object_msg, object_dims, static)
 
     rospy.loginfo(f"Loaded object named '{object_name}' within load_object()...")
 
-    return ObjectModel(collision_object_msg, object_dims, static), pose
+    return ObjectDataYAML(object_model, pose)
 
 
 def load_solid_primitive(
@@ -276,7 +284,7 @@ def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Tri
         else:
             raise ValueError(f"Unknown mesh processing step: '{step}'")
 
-    mesh.show()
+    # mesh.show()
 
     return mesh
 

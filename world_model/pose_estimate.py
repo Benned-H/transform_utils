@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from transform_utils.math.average_3d import compute_average_pose
+from transform_utils.math.distances import compute_distances_to_others_m, identify_worst_outlier
 
 if TYPE_CHECKING:
     from transform_utils.kinematics import Pose3D
@@ -52,9 +53,13 @@ class PoseEstimate3D:
 class AveragedPoseEstimate3D(AbstractPoseEstimate):
     """An object pose estimate based on an average of observed pose estimates."""
 
-    def __init__(self) -> None:
-        """Initialize the member variables of the averaged pose estimate."""
-        self._estimates: set[PoseEstimate3D] = set()
+    def __init__(self, max_estimates: int = 10) -> None:
+        """Initialize the member variables of the averaged pose estimate.
+
+        :param max_estimates: Maximum number of estimates to track at once
+        """
+        self._estimates: list[PoseEstimate3D] = []
+        self.max_estimates = max_estimates
 
     @property
     def pose(self) -> Pose3D | None:
@@ -95,9 +100,28 @@ class AveragedPoseEstimate3D(AbstractPoseEstimate):
         :param new_pose: New 3D pose to integrate into the combined estimate
         :param confidence: Confidence value associated with the given pose, defaults to 0.0
         """
-        self._estimates.add(PoseEstimate3D(new_pose, confidence))
+        self._estimates.append(PoseEstimate3D(new_pose, confidence))
+
+        # Prune estimates if we've exceeded the maximum intended number
+        while len(self._estimates) > self.max_estimates:
+            all_poses = [est.pose for est in self._estimates]
+
+            # Filter any estimate more than a meter from all other estimates
+            for idx in range(len(self._estimates)):
+                distances_m = compute_distances_to_others_m(idx, all_poses)
+                if min(distances_m) > 1.0:
+                    self._estimates.pop(idx)
+                    break
+
+            # Restart the loop if we deleted an estimate
+            if len(all_poses) != len(self._estimates):
+                continue
+
+            # If there are still too many estimates, filter the "worst" estimate
+            outlier_idx = identify_worst_outlier(all_poses)
+            self._estimates.pop(outlier_idx)
 
     @property
-    def all_estimates(self) -> set[PoseEstimate3D]:
-        """Retrieve the set of all pose estimates forming the average."""
+    def all_estimates(self) -> list[PoseEstimate3D]:
+        """Retrieve the list of all pose estimates forming the average."""
         return self._estimates

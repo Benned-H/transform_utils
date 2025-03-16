@@ -44,6 +44,8 @@ class VisualizeWorldObjects:
         self.marker_pub = rospy.Publisher("visualization_marker", MarkerMsg, queue_size=10)
         self.config = config
 
+        self._marker_id = 0  # Increments indefinitely
+
     def create_rgb_axes(self, pose: Pose3D) -> tuple[list[PointMsg], list[ColorRGBA]]:
         """Convert a Pose3D object into six points defining its RGB axes.
 
@@ -83,16 +85,16 @@ class VisualizeWorldObjects:
         msg.header.stamp = rospy.Time.now()
         msg.header.frame_id = DEFAULT_FRAME  # Visualize the poses w.r.t. the default frame
 
-        all_estimates = avg.all_estimates
-        num_estimates = len(all_estimates)
-
         msg.ns = obj_name
-        msg.id = num_estimates  # Use the marker ID to indicate how many estimates it contains
+        msg.id = self._marker_id
+        self._marker_id += 1
+        msg.lifetime = rospy.Duration.from_sec(30)
+
         msg.type = MarkerMsg.LINE_LIST
         msg.action = MarkerMsg.ADD
         msg.scale.x = self.config.axis_width_m
 
-        for pose_estimate in all_estimates:
+        for pose_estimate in avg.all_estimates:
             pose_wrt_world = TransformManager.convert_to_frame(pose_estimate.pose, DEFAULT_FRAME)
             point_msgs, color_msgs = self.create_rgb_axes(pose_wrt_world)
             msg.points += point_msgs

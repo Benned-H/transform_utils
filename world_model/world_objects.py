@@ -1,8 +1,7 @@
-"""Define a dataclass to model the objects in the environment."""
+"""Define a class to model the objects in the environment."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Generic, TypeVar
 
 from transform_utils.world_model.pose_estimate import AbstractPoseEstimate
@@ -15,12 +14,29 @@ if TYPE_CHECKING:
 PoseEstimateT = TypeVar("PoseEstimateT", bound=AbstractPoseEstimate)
 
 
-@dataclass
 class WorldObjects(Generic[PoseEstimateT]):
     """A collection of object models at estimated poses in the world."""
 
-    objects: dict[str, ObjectModel]  # Map from object names to object models
-    pose_estimates: dict[str, PoseEstimateT]  # Map from object names to pose estimates
+    def __init__(self, pose_estimate_type: type[PoseEstimateT]) -> None:
+        """Initialize the world model with the pose estimation type it will use."""
+        self.objects: dict[str, ObjectModel] = {}  # Map from object names to object models
+        self.pose_estimates: dict[str, PoseEstimateT] = {}  # Map from objects to pose estimates
+
+        self._pose_estimate_t = pose_estimate_type
+
+    def add_object(self, obj_model: ObjectModel) -> bool:
+        """Add the given object model into the world, if the object's name is unused.
+
+        :param obj_model: Geometric model of an object
+        :return: True if the object was added, otherwise False.
+        """
+        if obj_model.name in self.objects:
+            return False
+
+        self.objects[obj_model.name] = obj_model
+        self.pose_estimates[obj_model.name] = self._pose_estimate_t()  # Empty pose estimate
+
+        return True
 
     def get_object(self, obj_name: str) -> ObjectModel:
         """Retrieve the object of the given name."""
