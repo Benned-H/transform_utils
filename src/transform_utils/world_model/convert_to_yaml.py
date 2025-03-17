@@ -3,7 +3,6 @@
 from typing import Any
 
 import yaml
-
 from transform_utils.world_model.load_from_yaml import EnvironmentModel
 
 
@@ -22,4 +21,5 @@ def get_object_poses_yaml(env: EnvironmentModel) -> str:
                 "pose": object_data.pose.to_list(),
                 "frame": object_data.pose.ref_frame,
             }
+
     return yaml.dump(yaml_data, sort_keys=True)

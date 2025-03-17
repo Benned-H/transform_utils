@@ -12,7 +12,6 @@ import shape_msgs.msg
 import trimesh
 import yaml
 from moveit_msgs.msg import CollisionObject
-
 from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros.ros_utils import resolve_package_path
@@ -54,6 +53,48 @@ def load_known_object_names_from_yaml(yaml_path: Path) -> list[str]:
     """
     env = load_environment_from_yaml(yaml_path)
     return list(env.objects.keys())
+
+
+def populate_object_poses(env: EnvironmentModel, object_poses_yaml_path: Path) -> None:
+    """Populate the object poses in the given environment using the given YAML file.
+
+    :param env: Environment model (object poses are updated in-place)
+    :param object_poses_yaml_path: Path to a YAML file containing object poses
+    """
+    object_poses = load_object_poses_from_yaml(object_poses_yaml_path)
+
+    for obj_name, obj_pose in object_poses.items():
+        assert obj_name in env.objects, f"Pose was provided for nonexistent object '{obj_name}'."
+        env.objects[obj_name].pose = obj_pose
+
+
+def load_object_poses_from_yaml(yaml_path: Path) -> dict[str, Pose3D]:
+    """Load initial object poses from the given YAML file.
+
+    :param yaml_path: Path to the YAML file containing object poses
+    :return: Map from object names to their poses
+    """
+    pose_dict: dict[str, Pose3D] = {}
+
+    if not yaml_path.exists():
+        rospy.logerr(f"The YAML path {yaml_path} doesn't exist!")
+        return pose_dict
+
+    try:
+        with yaml_path.open() as yaml_file:
+            yaml_data = yaml.safe_load(yaml_file)
+            rospy.loginfo(f"Loaded environment data from YAML file: {yaml_path}")
+    except yaml.YAMLError as error:
+        rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
+        return pose_dict
+
+    if "objects" in yaml_data:
+        for obj_name, obj_data in yaml_data["objects"]:
+            pose_list = obj_data["pose"]
+            frame = obj_data["frame"]
+            pose_dict[obj_name] = Pose3D.from_list(pose_list, ref_frame=frame)
+
+    return pose_dict
 
 
 def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
