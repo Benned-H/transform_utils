@@ -18,6 +18,7 @@ class ObjectModel:
     message: CollisionObject
     pose: Pose3D | None  # Pose of the object, or None if its pose is unknown
     dimensions: tuple[float, float, float]  # Size in (x, y, z)
+    static: bool  # True if the object cannot move
 
     @property
     def name(self) -> str:
