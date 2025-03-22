@@ -242,6 +242,13 @@ class Pose3D:
         roll_rad, pitch_rad, yaw_rad = rpy
         return [x, y, z, roll_rad, pitch_rad, yaw_rad]
 
+    def to_yaml_dict(self) -> dict[str, str | list[float]]:
+        """Convert the pose into a dictionary suitable for export to YAML.
+
+        :return: Dictionary containing the pose's data and reference frame
+        """
+        return {"pose": self.to_list(), "frame": self.ref_frame}
+
     @classmethod
     def from_homogeneous_matrix(cls, matrix: np.ndarray, ref_frame: str = DEFAULT_FRAME) -> Pose3D:
         """Construct a Pose3D from a 4x4 homogeneous transformation matrix."""

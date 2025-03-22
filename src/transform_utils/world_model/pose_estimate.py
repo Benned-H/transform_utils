@@ -27,11 +27,8 @@ class AbstractPoseEstimate(ABC):
         """Retrieve whether the stored pose estimate is considered 'known'."""
 
     @abstractmethod
-    def reset_to(self, new_pose: Pose3D) -> None:
-        """Reset the stored pose estimate to the given pose.
-
-        :param new_pose: New stored pose after the pose estimate is reset
-        """
+    def reset(self) -> None:
+        """Reset the pose estimate to its initial empty state."""
 
     @abstractmethod
     def update(self, new_pose: Pose3D, confidence: float = 0.0) -> None:
@@ -85,14 +82,9 @@ class AveragedPoseEstimate3D(AbstractPoseEstimate):
         max_confidence = max([e.confidence for e in self._estimates], default=0.0)
         return max_confidence > 0.0
 
-    def reset_to(self, new_pose: Pose3D, confidence: float = 100.0) -> None:
-        """Reset the stored pose estimate to the given pose.
-
-        :param new_pose: New stored pose after the pose estimate is reset
-        :param confidence: Confidence value associated with the pose, defaults to 100.0
-        """
+    def reset(self) -> None:
+        """Reset the pose estimate to its initial empty state."""
         self._estimates.clear()
-        self.update(new_pose, confidence)
 
     def update(self, new_pose: Pose3D, confidence: float = 0.0) -> None:
         """Update the stored pose estimate using the given pose estimate.

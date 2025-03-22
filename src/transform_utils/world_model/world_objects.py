@@ -58,7 +58,8 @@ class WorldObjects(Generic[PoseEstimateT]):
         """
         assert obj_name in self.objects, f"Cannot set pose of unknown object: '{obj_name}'."
 
-        self.pose_estimates[obj_name].reset_to(new_pose)
+        self.pose_estimates[obj_name].reset()
+        self.pose_estimates[obj_name].update(new_pose)
 
     def update_pose_estimate(self, obj_name: str, pose: Pose3D, confidence: float = 0.0) -> None:
         """Update the pose estimate of the named object using the given data.

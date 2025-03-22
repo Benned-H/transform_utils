@@ -88,7 +88,7 @@ class VisualizeWorldObjects:
         msg.ns = obj_name
         msg.id = self._marker_id
         self._marker_id += 1
-        msg.lifetime = rospy.Duration.from_sec(30)
+        msg.lifetime = rospy.Duration.from_sec(10)
 
         msg.type = MarkerMsg.LINE_LIST
         msg.action = MarkerMsg.ADD
