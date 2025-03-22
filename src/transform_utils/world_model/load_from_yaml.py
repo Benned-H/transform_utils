@@ -12,6 +12,7 @@ import shape_msgs.msg
 import trimesh
 import yaml
 from moveit_msgs.msg import CollisionObject
+
 from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros.ros_utils import resolve_package_path
@@ -53,6 +54,14 @@ def load_known_object_names_from_yaml(yaml_path: Path) -> list[str]:
     """
     env = load_environment_from_yaml(yaml_path)
     return list(env.objects.keys())
+
+
+def populate_poses(env: EnvironmentModel, poses_yaml_path: Path) -> None:
+    """Populate updated poses in an environment model using the given YAML file.
+
+    :param env: Environment model (robot base poses and object poses are updated in-place)
+    :param poses_yaml_path: Path to a YAML file containing poses
+    """
 
 
 def populate_object_poses(env: EnvironmentModel, object_poses_yaml_path: Path) -> None:
