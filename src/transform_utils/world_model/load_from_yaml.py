@@ -62,6 +62,35 @@ def populate_poses(env: EnvironmentModel, poses_yaml_path: Path) -> None:
     :param env: Environment model (robot base poses and object poses are updated in-place)
     :param poses_yaml_path: Path to a YAML file containing poses
     """
+    if not poses_yaml_path.exists():
+        rospy.logerr(f"The YAML path {poses_yaml_path} doesn't exist!")
+        return
+
+    try:
+        with poses_yaml_path.open() as yaml_file:
+            yaml_data = yaml.safe_load(yaml_file)
+            rospy.loginfo(f"Loaded pose data from YAML file: {poses_yaml_path}")
+    except yaml.YAMLError as error:
+        rospy.logerr(f"Failed to load YAML file: {poses_yaml_path}\nError: {error}")
+        return
+
+    if "robot_base_poses" in yaml_data:
+        for robot_name, robot_data in yaml_data["robot_base_poses"].items():
+            assert robot_name in env.base_poses, f"Cannot set pose of unknown robot '{robot_name}'"
+
+            pose_list = robot_data["pose"]
+            frame = robot_data["frame"]
+
+            env.base_poses[robot_name] = Pose3D.from_list(pose_list, ref_frame=frame)
+
+    if "objects" in yaml_data:
+        for obj_name, obj_data in yaml_data["objects"].items():
+            assert obj_name in env.objects, f"Cannot set pose of unknown object '{obj_name}'"
+
+            pose_list = obj_data["pose"]
+            frame = obj_data["frame"]
+
+            env.objects[obj_name].pose = Pose3D.from_list(pose_list, ref_frame=frame)
 
 
 def populate_object_poses(env: EnvironmentModel, object_poses_yaml_path: Path) -> None:
@@ -83,20 +112,6 @@ def load_object_poses_from_yaml(yaml_path: Path) -> dict[str, Pose3D]:
     :param yaml_path: Path to the YAML file containing object poses
     :return: Map from object names to their poses
     """
-    pose_dict: dict[str, Pose3D] = {}
-
-    if not yaml_path.exists():
-        rospy.logerr(f"The YAML path {yaml_path} doesn't exist!")
-        return pose_dict
-
-    try:
-        with yaml_path.open() as yaml_file:
-            yaml_data = yaml.safe_load(yaml_file)
-            rospy.loginfo(f"Loaded environment data from YAML file: {yaml_path}")
-    except yaml.YAMLError as error:
-        rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
-        return pose_dict
-
     if "objects" in yaml_data:
         for obj_name, obj_data in yaml_data["objects"]:
             pose_list = obj_data["pose"]
