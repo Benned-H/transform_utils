@@ -6,11 +6,13 @@ from typing import TYPE_CHECKING
 
 import rospy
 from tf2_ros import Buffer, TransformBroadcaster, TransformException, TransformListener
+
 from transform_utils.kinematics_ros import pose_from_tf_stamped_msg, pose_to_tf_stamped_msg
 
 if TYPE_CHECKING:
     from geometry_msgs.msg import TransformStamped
-    from transform_utils.kinematics import Pose3D
+
+    from transform_utils.kinematics import Pose2D, Pose3D
 
 
 class TransformManager:
@@ -137,7 +139,7 @@ class TransformManager:
         return pose_t_s
 
     @staticmethod
-    def convert_to_frame(pose_c_p: Pose3D, new_ref_frame: str) -> Pose3D:
+    def convert_to_frame(pose_c_p: Pose2D | Pose3D, new_ref_frame: str) -> Pose3D:
         """Convert the given pose into a new reference frame.
 
         Frames: Frame implied by the pose (p), current ref. frame (c), new ref. frame (n)
@@ -146,6 +148,9 @@ class TransformManager:
         :param new_ref_frame: New reference frame (frame n) of the returned pose
         :return: Pose3D relative to the new reference frame (i.e., pose_n_p)
         """
+        if isinstance(pose_c_p, Pose2D):
+            pose_c_p = Pose3D.from_2d(pose_c_p)
+
         if pose_c_p.ref_frame == new_ref_frame:
             return pose_c_p
 

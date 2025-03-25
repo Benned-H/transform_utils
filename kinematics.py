@@ -110,6 +110,16 @@ DEFAULT_FRAME = "map"
 
 
 @dataclass
+class Pose2D:
+    """A position and orientation on the 2D plane."""
+
+    x: float
+    y: float
+    yaw_rad: float
+    ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
+
+
+@dataclass
 class Pose3D:
     """A position and orientation in 3D space."""
 
@@ -137,6 +147,20 @@ class Pose3D:
         """
         inv_transform = np.linalg.inv(self.to_homogeneous_matrix())
         return Pose3D.from_homogeneous_matrix(inv_transform, ref_frame)
+
+    @classmethod
+    def from_2d(cls, pose: Pose2D) -> Pose3D:
+        """Construct a Pose3D from a Pose2D.
+
+        :param pose: Pose in 2D space
+        :return: 3D pose corresponding to the given 2D pose
+        """
+        return Pose3D.from_xyz_rpy(
+            x=pose.x,
+            y=pose.y,
+            yaw_rad=pose.yaw_rad,
+            ref_frame=pose.ref_frame,
+        )
 
     @classmethod
     def from_xyz_rpy(
