@@ -51,7 +51,7 @@ def load_yaml_into_dict(yaml_path: Path) -> dict[str, Any]:
     try:
         with yaml_path.open() as yaml_file:
             yaml_data = yaml.safe_load(yaml_file)
-            rospy.loginfo(f"Loaded environment data from YAML file: {yaml_path}")
+            rospy.loginfo(f"Loaded data from YAML file: {yaml_path}")
     except yaml.YAMLError as error:
         rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
         return {}
