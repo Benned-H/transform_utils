@@ -130,7 +130,7 @@ class Pose2D:
 
     @classmethod
     def from_list(cls, x_y_yaw: list[float], ref_frame: str = DEFAULT_FRAME) -> Pose2D:
-        """Construct a Pose2D from the given list of XYZ-RPY data.
+        """Construct a Pose2D from the given list of X-Y-Yaw data.
 
         :param x_y_yaw: List of three floats specifying (x,y,yaw)
         :param ref_frame: Reference frame of the constructed Pose2D
