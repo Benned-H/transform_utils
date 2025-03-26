@@ -210,6 +210,18 @@ class Pose3D:
 
         return cls(position, orientation, ref_frame)
 
+    @classmethod
+    def from_list(cls, xyz_rpy: list[float], ref_frame: str = DEFAULT_FRAME) -> Pose3D:
+        """Construct a Pose3D from the given list of XYZ-RPY data.
+
+        :param xyz_rpy: List of six floats specifying (x,y,z,roll,pitch,yaw)
+        :param ref_frame: Reference frame of the constructed Pose3D
+        :return: Pose3D constructed using the given values
+        """
+        assert len(xyz_rpy) == 6, f"Cannot construct Pose3D from list of length {len(xyz_rpy)}"
+        x, y, z, roll, pitch, yaw = xyz_rpy
+        return Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, ref_frame)
+
     def to_xyz_rpy(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
         """Convert the pose into the corresponding (x, y, z) and (roll, pitch, yaw) tuples.
 
