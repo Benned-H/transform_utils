@@ -15,7 +15,7 @@ from moveit_msgs.msg import CollisionObject
 
 from transform_utils.kinematics import DEFAULT_FRAME, Pose2D, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
-from transform_utils.ros_utils import resolve_package_path
+from transform_utils.ros.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
 
 if TYPE_CHECKING:

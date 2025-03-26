@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Generic, TypeVar
 
 import rospy
+from std_srvs.srv import Trigger, TriggerResponse
 
 RequestT = TypeVar("RequestT")  # Service request message type (e.g., `AddTwoIntsRequest`)
 ResponseT = TypeVar("ResponseT")  # Service response message type (e.g., `AddTwoIntsResponse`)
@@ -52,3 +53,23 @@ class ServiceCaller(Generic[RequestT, ResponseT]):
         :return: Response from the service, or None if the call fails
         """
         return self.call_service(request)
+
+
+def trigger_service(service_name: str) -> bool:
+    """Call the named ROS service of the std_srvs/Trigger type.
+
+    :param service_name: Name of the std_srvs/Trigger service to be called
+    :return: Boolean success returned by the service (True or False)
+    """
+    rospy.wait_for_service(service_name)
+    service_caller = rospy.ServiceProxy(service_name, Trigger)
+
+    success = False
+    try:
+        response: TriggerResponse = service_caller()
+        rospy.loginfo(f"[{service_name}] Service response message: {response.message}")
+        success = response.success
+    except rospy.ServiceException as exc:
+        rospy.logerr(f"[{service_name}] Could not communicate with service: {exc}")
+
+    return success
