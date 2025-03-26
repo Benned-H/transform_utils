@@ -13,7 +13,7 @@ import trimesh
 import yaml
 from moveit_msgs.msg import CollisionObject
 
-from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
+from transform_utils.kinematics import DEFAULT_FRAME, Pose2D, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
 from transform_utils.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
@@ -38,6 +38,67 @@ class EnvironmentModel:
     objects: dict[str, ObjectModel]  # Maps object names to their geometric models
 
 
+def load_yaml_into_dict(yaml_path: Path) -> dict[str, Any]:
+    """Load data from a YAML file into a Python dictionary.
+
+    :param yaml_path: Path to the YAML file to be imported
+    :return: Dictionary mapping strings to values (empty if the YAML file is nonexistent/invalid)
+    """
+    if not yaml_path.exists():
+        rospy.logerr(f"The YAML path {yaml_path} doesn't exist!")
+        return {}
+
+    try:
+        with yaml_path.open() as yaml_file:
+            yaml_data = yaml.safe_load(yaml_file)
+            rospy.loginfo(f"Loaded environment data from YAML file: {yaml_path}")
+    except yaml.YAMLError as error:
+        rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
+        return {}
+
+    return yaml_data
+
+
+def load_named_poses_2d(poses_data: dict[str, Any], default_frame: str) -> dict[str, Pose2D]:
+    """Load a collection of named 2D poses from data imported from YAML.
+
+    :param poses_data: Dictionary mapping robot/object/location names to 2D pose data
+    :param default_frame: Reference frame used for any poses without a specified frame
+    :return: Map from robot/object/location names to 2D poses
+    """
+    named_poses: dict[str, Pose2D] = {}
+
+    for name, pose_data in poses_data.items():
+        if isinstance(pose_data, list):  # Pose represented as [x, y, yaw] list
+            named_poses[name] = Pose2D.from_list(pose_data, ref_frame=default_frame)
+        elif isinstance(pose_data, dict):  # Pose with reference frame specified
+            ref_frame: str = pose_data.get("frame", default_frame)
+            pose_list = pose_data["x_y_yaw"]
+            named_poses[name] = Pose2D.from_list(pose_list, ref_frame=ref_frame)
+
+    return named_poses
+
+
+def load_named_poses(poses_data: dict[str, Any], default_frame: str) -> dict[str, Pose3D]:
+    """Load a collection of named 3D poses from data imported from YAML.
+
+    :param poses_data: Dictionary mapping robot/object/location names to 3D pose data
+    :param default_frame: Reference frame used for any poses without a specified frame
+    :return: Map from robot/object/location names to 3D poses
+    """
+    named_poses: dict[str, Pose3D] = {}
+
+    for name, pose_data in poses_data.items():
+        if isinstance(pose_data, list):  # Pose represented as XYZ-RPY list
+            named_poses[name] = Pose3D.from_list(pose_data, ref_frame=default_frame)
+        elif isinstance(pose_data, dict):  # Pose with reference frame specified
+            ref_frame: str = pose_data.get("frame", default_frame)
+            pose_list = pose_data["xyz_rpy"]
+            named_poses[name] = Pose3D.from_list(pose_list, ref_frame=ref_frame)
+
+    return named_poses
+
+
 def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
     """Load an environment model from the given YAML file.
 
@@ -46,39 +107,15 @@ def load_environment_from_yaml(yaml_path: Path) -> EnvironmentModel:
     """
     env = EnvironmentModel({}, {})
 
-    if not yaml_path.exists():
-        rospy.logerr(f"The YAML path {yaml_path} doesn't exist!")
-        return env
-
-    try:
-        with yaml_path.open() as yaml_file:
-            yaml_data = yaml.safe_load(yaml_file)
-            rospy.loginfo(f"Loaded environment data from YAML file: {yaml_path}")
-    except yaml.YAMLError as error:
-        rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
-        return env
+    yaml_data = load_yaml_into_dict(yaml_path)
 
     if "robot_base_poses" in yaml_data:
-        env.base_poses = load_robot_base_poses(yaml_data["robot_base_poses"])
+        env.base_poses = load_named_poses(yaml_data["robot_base_poses"], DEFAULT_FRAME)
 
     if "objects" in yaml_data:
         env.objects = load_objects(yaml_data["objects"])
 
     return env
-
-
-def load_robot_base_poses(robots_data: dict[str, list[float]]) -> dict[str, Pose3D]:
-    """Load robots' initial base poses from data imported from YAML.
-
-    :param robots_data: Map from robot names to base poses (lists of XYZ RPY floats)
-    :return: Map from robot names to robot base poses represented as Pose3Ds
-    """
-    base_poses: dict[str, Pose3D] = {}
-
-    for robot_name, base_pose_list in robots_data.items():
-        base_poses[robot_name] = Pose3D.from_list(base_pose_list, DEFAULT_FRAME)
-
-    return base_poses
 
 
 def load_objects(objects_data: dict[str, dict[str, Any]]) -> dict[str, ObjectModel]:
