@@ -128,6 +128,18 @@ class Pose2D:
     yaw_rad: float
     ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
 
+    @classmethod
+    def from_list(cls, x_y_yaw: list[float], ref_frame: str = DEFAULT_FRAME) -> Pose2D:
+        """Construct a Pose2D from the given list of X-Y-Yaw data.
+
+        :param x_y_yaw: List of three floats specifying (x,y,yaw)
+        :param ref_frame: Reference frame of the constructed Pose2D
+        :return: Pose2D constructed using the given values
+        """
+        assert len(x_y_yaw) == 3, f"Cannot construct Pose2D from list of length {len(x_y_yaw)}."
+        x, y, yaw_rad = x_y_yaw
+        return Pose2D(x, y, yaw_rad, ref_frame)
+
 
 @dataclass
 class Pose3D:
@@ -218,7 +230,7 @@ class Pose3D:
         :param ref_frame: Reference frame of the constructed Pose3D
         :return: Pose3D constructed using the given values
         """
-        assert len(xyz_rpy) == 6, f"Cannot construct Pose3D from list of length {len(xyz_rpy)}"
+        assert len(xyz_rpy) == 6, f"Cannot construct Pose3D from list of length {len(xyz_rpy)}."
         x, y, z, roll, pitch, yaw = xyz_rpy
         return Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, ref_frame)
 
