@@ -6,12 +6,8 @@ from dataclasses import dataclass
 from typing import Dict
 
 import numpy as np
-from tf.transformations import (
-    euler_from_quaternion,
-    quaternion_from_euler,
-    quaternion_from_matrix,
-    quaternion_matrix,
-)
+from transforms3d.euler import euler2quat, quat2euler
+from transforms3d.quaternions import mat2quat, quat2mat
 
 Configuration = Dict[str, float]  # Map from joint names to positions (rad or m)
 
@@ -45,13 +41,13 @@ class Point3D:
 
 
 @dataclass
-class Quaternion:
+class UnitQuaternion:
     """A unit quaternion representing a 3D orientation."""
 
-    x: float
-    y: float
-    z: float
-    w: float
+    w: float  # Scalar component of the quaternion
+    x: float  # x-component of the quaternion vector
+    y: float  # y-component of the quaternion vector
+    z: float  # z-component of the quaternion vector
 
     def __post_init__(self) -> None:
         """Normalize the quaternion after it is initialized."""
@@ -60,25 +56,25 @@ class Quaternion:
     def normalize(self) -> None:
         """Normalize the quaternion to ensure that it is a unit quaternion."""
         norm = float(np.linalg.norm(self.to_array()))
-        assert norm > 0, f"Cannot normalize near-zero quaternion: {self}"
+        assert norm > 0, f"Cannot normalize near-zero quaternion: {self}."
 
+        self.w /= norm
         self.x /= norm
         self.y /= norm
         self.z /= norm
-        self.w /= norm
 
     @classmethod
-    def identity(cls) -> Quaternion:
+    def identity(cls) -> UnitQuaternion:
         """Construct a quaternion corresponding to the identity rotation."""
-        return cls(0, 0, 0, 1)
+        return UnitQuaternion(w=1, x=0, y=0, z=0)
 
     def to_array(self) -> np.ndarray:
-        """Convert the quaternion to a NumPy array."""
-        return np.array([self.x, self.y, self.z, self.w])
+        """Convert the quaternion to a NumPy array of the form [w,x,y,z]."""
+        return np.array([self.w, self.x, self.y, self.z])
 
     @classmethod
-    def from_array(cls, arr: np.ndarray) -> Quaternion:
-        """Construct a quaternion from a NumPy array."""
+    def from_array(cls, arr: np.ndarray) -> UnitQuaternion:
+        """Construct a quaternion from a NumPy array of the form [w,x,y,z]."""
         assert arr.shape == (4,), "Quaternion must be a four-element vector."
         return cls(arr[0], arr[1], arr[2], arr[3])
 
@@ -87,37 +83,48 @@ class Quaternion:
 
         :return: Tuple of (roll, pitch, yaw) angles in radians
         """
-        r, p, y = euler_from_quaternion(self.to_array())
+        r, p, y = quat2euler(self.to_array(), axes="sxyz")
         return (r, p, y)
 
     @classmethod
-    def from_euler_rpy(cls, roll_rad: float, pitch_rad: float, yaw_rad: float) -> Quaternion:
+    def from_euler_rpy(cls, roll_rad: float, pitch_rad: float, yaw_rad: float) -> UnitQuaternion:
         """Construct a quaternion from three fixed-frame Euler angles.
 
-        Note: By default, the quaternion_from_euler() function uses: axes="sxyz"
-            meaning roll, then pitch, then yaw, all in a static (i.e., fixed) frame.
+        Note: We use the axes "sxyz", meaning roll, then pitch, then yaw, all in a fixed frame.
 
         :param roll_rad: Roll angle about the x-axis (radians)
         :param pitch_rad: Pitch angle about the y-axis (radians)
         :param yaw_rad: Yaw angle about the z-axis (radians)
         :return: Unit quaternion corresponding to the Euler angles
         """
-        return cls.from_array(quaternion_from_euler(roll_rad, pitch_rad, yaw_rad))
+        return cls.from_array(euler2quat(roll_rad, pitch_rad, yaw_rad, axes="sxyz"))
 
     def to_rotation_matrix(self) -> np.ndarray:
         """Convert the quaternion to a 3x3 rotation matrix."""
-        matrix = quaternion_matrix([self.x, self.y, self.z, self.w])
-        assert matrix.shape == (4, 4), f"Homogeneous matrix must be 4x4; was {matrix.shape}."
-        return matrix[:3, :3]
+        r_matrix = quat2mat(np.array([self.w, self.x, self.y, self.z]))
+        assert r_matrix.shape == (3, 3), f"Expected 3x3 rotation matrix but found {r_matrix.shape}."
+        return r_matrix
 
     @classmethod
-    def from_rotation_matrix(cls, r_matrix: np.ndarray) -> Quaternion:
+    def from_rotation_matrix(cls, r_matrix: np.ndarray) -> UnitQuaternion:
         """Construct a quaternion from a 3x3 rotation matrix."""
         assert r_matrix.shape == (3, 3), f"Expected a 3x3 matrix; received {r_matrix.shape}."
-        homogeneous_r_matrix = np.eye(4)
-        homogeneous_r_matrix[:3, :3] = r_matrix
-        q_array = quaternion_from_matrix(homogeneous_r_matrix)
+
+        q_array = mat2quat(r_matrix)  # Form of transforms3d quaternions: [w, x, y, z]
         return cls.from_array(q_array)
+
+    def approx_equal(self, other: UnitQuaternion) -> bool:
+        """Check whether another quaternion is approximately equal to this one.
+
+        Note: A quaternion is considered equal to its negation, which expresses the same rotation.
+        """
+        self_array = self.to_array()
+        other_array = other.to_array()
+
+        pos_case = np.allclose(self_array, other_array)
+        neg_case = np.allclose(-self_array, other_array)
+
+        return pos_case or neg_case
 
 
 DEFAULT_FRAME = "map"
@@ -150,7 +157,7 @@ class Pose3D:
     """A position and orientation in 3D space."""
 
     position: Point3D
-    orientation: Quaternion
+    orientation: UnitQuaternion
     ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
 
     @property
@@ -162,7 +169,7 @@ class Pose3D:
     @classmethod
     def identity(cls) -> Pose3D:
         """Construct a Pose3D corresponding to the identity transformation."""
-        return Pose3D(Point3D.identity(), Quaternion.identity())
+        return Pose3D(Point3D.identity(), UnitQuaternion.identity())
 
     def __matmul__(self, other: Pose3D) -> Pose3D:
         """Multiply the homogeneous transformation matrices of this pose and another pose."""
@@ -180,6 +187,10 @@ class Pose3D:
         inv_transform = np.linalg.inv(self.to_homogeneous_matrix())
         return Pose3D.from_homogeneous_matrix(inv_transform, ref_frame)
 
+    def to_2d(self) -> Pose2D:
+        """Convert the pose into a 2D pose, discarding any 3D-only information."""
+        return Pose2D(self.position.x, self.position.y, self.yaw_rad, self.ref_frame)
+
     @classmethod
     def from_2d(cls, pose: Pose2D) -> Pose3D:
         """Construct a Pose3D from a Pose2D.
@@ -194,9 +205,14 @@ class Pose3D:
             ref_frame=pose.ref_frame,
         )
 
-    def to_2d(self) -> Pose2D:
-        """Convert the pose into a 2D pose, discarding any 3D-only information."""
-        return Pose2D(self.position.x, self.position.y, self.yaw_rad, self.ref_frame)
+    def to_xyz_rpy(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        """Convert the pose into the corresponding (x, y, z) and (roll, pitch, yaw) tuples.
+
+        :return: Pair of tuples (x, y, z) and (roll, pitch, yaw) with angles in radians
+        """
+        xyz = (self.position.x, self.position.y, self.position.z)
+        rpy = self.orientation.to_euler_rpy()
+        return (xyz, rpy)
 
     @classmethod
     def from_xyz_rpy(
@@ -222,7 +238,7 @@ class Pose3D:
         :return: Pose3D constructed using the given values
         """
         position = Point3D(x, y, z)
-        orientation = Quaternion.from_euler_rpy(roll_rad, pitch_rad, yaw_rad)
+        orientation = UnitQuaternion.from_euler_rpy(roll_rad, pitch_rad, yaw_rad)
 
         return cls(position, orientation, ref_frame)
 
@@ -238,26 +254,23 @@ class Pose3D:
         x, y, z, roll, pitch, yaw = xyz_rpy
         return Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, ref_frame)
 
-    def to_xyz_rpy(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        """Convert the pose into the corresponding (x, y, z) and (roll, pitch, yaw) tuples.
-
-        :return: Pair of tuples (x, y, z) and (roll, pitch, yaw) with angles in radians
-        """
-        xyz = (self.position.x, self.position.y, self.position.z)
-        rpy = self.orientation.to_euler_rpy()
-        return (xyz, rpy)
-
-    @classmethod
-    def from_homogeneous_matrix(cls, matrix: np.ndarray, ref_frame: str = DEFAULT_FRAME) -> Pose3D:
-        """Construct a Pose3D from a 4x4 homogeneous transformation matrix."""
-        assert matrix.shape == (4, 4), f"Expected a 4x4 matrix; received {matrix.shape}."
-        position = Point3D(matrix[0, 3], matrix[1, 3], matrix[2, 3])
-        orientation = Quaternion.from_rotation_matrix(matrix[:3, :3])
-        return cls(position, orientation, ref_frame)
-
     def to_homogeneous_matrix(self) -> np.ndarray:
         """Convert the Pose3D to a 4x4 homogeneous transformation matrix."""
         matrix = np.eye(4)
         matrix[:3, :3] = self.orientation.to_rotation_matrix()
         matrix[:3, 3] = [self.position.x, self.position.y, self.position.z]
         return matrix
+
+    @classmethod
+    def from_homogeneous_matrix(cls, matrix: np.ndarray, ref_frame: str = DEFAULT_FRAME) -> Pose3D:
+        """Construct a Pose3D from a 4x4 homogeneous transformation matrix."""
+        assert matrix.shape == (4, 4), f"Expected a 4x4 matrix; received {matrix.shape}."
+        position = Point3D(matrix[0, 3], matrix[1, 3], matrix[2, 3])
+        orientation = UnitQuaternion.from_rotation_matrix(matrix[:3, :3])
+        return cls(position, orientation, ref_frame)
+
+    def approx_equal(self, other: Pose3D) -> bool:
+        """Check whether another Pose3D is approximately equal to this one."""
+        positions_approx_equal = self.position.approx_equal(other.position)
+        orientations_approx_equal = self.orientation.approx_equal(other.orientation)
+        return positions_approx_equal and orientations_approx_equal
