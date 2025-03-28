@@ -39,6 +39,10 @@ class Point3D:
         assert arr.shape == (3,), "3D position must be a three-element vector."
         return cls(arr[0], arr[1], arr[2])
 
+    def approx_equal(self, other: Point3D) -> bool:
+        """Check whether another point is approximately equal to this point."""
+        return np.allclose(self.to_array(), other.to_array())
+
 
 @dataclass
 class Quaternion:
@@ -56,7 +60,7 @@ class Quaternion:
     def normalize(self) -> None:
         """Normalize the quaternion to ensure that it is a unit quaternion."""
         norm = float(np.linalg.norm(self.to_array()))
-        assert norm != 0, "Cannot normalize a zero-valued quaternion."
+        assert norm > 0, f"Cannot normalize near-zero quaternion: {self}"
 
         self.x /= norm
         self.y /= norm
@@ -65,7 +69,7 @@ class Quaternion:
 
     @classmethod
     def identity(cls) -> Quaternion:
-        """Construct a Quaternion corresponding to the identity rotation."""
+        """Construct a quaternion corresponding to the identity rotation."""
         return cls(0, 0, 0, 1)
 
     def to_array(self) -> np.ndarray:
@@ -77,6 +81,14 @@ class Quaternion:
         """Construct a quaternion from a NumPy array."""
         assert arr.shape == (4,), "Quaternion must be a four-element vector."
         return cls(arr[0], arr[1], arr[2], arr[3])
+
+    def to_euler_rpy(self) -> tuple[float, float, float]:
+        """Convert the quaternion to Euler roll, pitch, and yaw angles.
+
+        :return: Tuple of (roll, pitch, yaw) angles in radians
+        """
+        r, p, y = euler_from_quaternion(self.to_array())
+        return (r, p, y)
 
     @classmethod
     def from_euler_rpy(cls, roll_rad: float, pitch_rad: float, yaw_rad: float) -> Quaternion:
@@ -92,13 +104,11 @@ class Quaternion:
         """
         return cls.from_array(quaternion_from_euler(roll_rad, pitch_rad, yaw_rad))
 
-    def to_euler_rpy(self) -> tuple[float, float, float]:
-        """Convert the quaternion to Euler roll, pitch, and yaw angles.
-
-        :return: Tuple of (roll, pitch, yaw) angles in radians
-        """
-        r, p, y = euler_from_quaternion(self.to_array())
-        return (r, p, y)
+    def to_rotation_matrix(self) -> np.ndarray:
+        """Convert the quaternion to a 3x3 rotation matrix."""
+        matrix = quaternion_matrix([self.x, self.y, self.z, self.w])
+        assert matrix.shape == (4, 4), f"Homogeneous matrix must be 4x4; was {matrix.shape}."
+        return matrix[:3, :3]
 
     @classmethod
     def from_rotation_matrix(cls, r_matrix: np.ndarray) -> Quaternion:
@@ -108,12 +118,6 @@ class Quaternion:
         homogeneous_r_matrix[:3, :3] = r_matrix
         q_array = quaternion_from_matrix(homogeneous_r_matrix)
         return cls.from_array(q_array)
-
-    def to_rotation_matrix(self) -> np.ndarray:
-        """Convert the quaternion to a 3x3 rotation matrix."""
-        matrix = quaternion_matrix([self.x, self.y, self.z, self.w])
-        assert matrix.shape == (4, 4), f"Homogeneous matrix must be 4x4; was {matrix.shape}."
-        return matrix[:3, :3]
 
 
 DEFAULT_FRAME = "map"
