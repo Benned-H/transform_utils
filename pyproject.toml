@@ -2,11 +2,80 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+
 [project]
 name = "transform_utils"
 version = "0.0.1"
-dependencies = []
 authors = [{ name = "Benned Hedegaard", email = "bhedegaa@cs.brown.edu" }]
 description = "Utility classes for representing and converting spatial transforms."
+classifiers = ["Typing :: Typed"]
+
 readme = "README.md"
 license = { file = "LICENSE" }
+requires-python = ">= 3.8"
+
+dependencies = ["numpy", "trimesh"]
+
+[dependency-groups]
+lint = ["ruff"]
+tests = ["pytest", "coverage", "hypothesis"]
+types = ["mypy", "typing-extensions"]
+
+
+[tool.uv]
+default-groups = ["tests", "types", "lint"]
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/transform_utils"] # Include packages at these paths
+
+
+[tool.ruff]
+line-length = 100
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["ALL"] # Default to all Ruff rules, add ignores as needed
+ignore = [
+    "D203",   # No blank line between class definition and its docstring
+    "D213",   # Place docstring summary immediately after the opening quotes
+    "TRY003", # Permit defining exception messages at point of raising
+]
+unfixable = ["F401"] # Disable 'fix' for unused imports
+
+# Allow omission of return type on __init__
+flake8-annotations = { mypy-init-return = true }
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/*" = ["S101"]   # Allow assertions in test files
+"**/scripts/*" = ["T201"] # Allow print statements in scripts
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"    # Needed to use pyproject.toml
+testpaths = ["tests"] # Directories searched for tests
+pythonpath = ["."]    # Added to Python search path
+
+[tool.coverage.run]
+data_file = ".coverage/combined"
+branch = true                    # Measure branch coverage
+source = ["src", "tests"]        # Measure coverage over these source paths
+
+[tool.coverage.report]
+show_missing = true
+format = "markdown"
+
+
+[tool.mypy]
+strict = true                   # Enable all optional error checking flags
+disallow_incomplete_defs = true # Allow entirely type-unannotated functions
+disallow_any_unimported = true
+implicit_optional = false
+check_untyped_defs = true       # Type-check interior of unannotated functions
+warn_return_any = true
+show_error_code_links = true    # Include documentation links for errors
+warn_unused_configs = true      # Warn if per-module mypy settings go unused
