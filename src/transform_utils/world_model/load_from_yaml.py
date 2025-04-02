@@ -13,9 +13,9 @@ import trimesh
 import yaml
 from moveit_msgs.msg import CollisionObject
 
+from src.transform_utils.ros.ros_utils import resolve_package_path
 from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
-from transform_utils.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
 
 if TYPE_CHECKING:
@@ -192,14 +192,18 @@ def load_solid_primitive(
 
     elif shape_type == "cylinder":
         msg.type = shape_msgs.msg.SolidPrimitive.CYLINDER
-        expected_dims = 2  # Cylinder primitive dimensions: [height, radius] (centered on z-axis)
+        expected_dims = (
+            2  # Cylinder primitive dimensions: [height, radius] (centered on z-axis)
+        )
 
     elif shape_type == "sphere":
         msg.type = shape_msgs.msg.SolidPrimitive.SPHERE
         expected_dims = 1  # Sphere primitive dimensions: [radius] (centered on origin)
 
     actual_dims = len(msg.dimensions)
-    assert actual_dims == expected_dims, f"{shape_type} shape expects {expected_dims} dimensions!"
+    assert actual_dims == expected_dims, (
+        f"{shape_type} shape expects {expected_dims} dimensions!"
+    )
 
     if shape_type == "box":
         shape_dims = (
@@ -243,18 +247,24 @@ def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Tri
 
         if step == "orient_bb":  # Axis-align the mesh using its oriented bounding box
             mesh.apply_obb()
-        elif step == "bottom":  # Translate the mesh so that z = 0 aligns with its bottom
+        elif (
+            step == "bottom"
+        ):  # Translate the mesh so that z = 0 aligns with its bottom
             mesh.apply_translation(np.array([0, 0, -min_z]))
         elif step == "center_xy":  # Translate the mesh so that its center has (x,y) = 0
             x_size = max_x - min_x
             y_size = max_y - min_y
-            mesh.apply_translation(np.array([-min_x - x_size / 2.0, -min_y - y_size / 2.0, 0]))
+            mesh.apply_translation(
+                np.array([-min_x - x_size / 2.0, -min_y - y_size / 2.0, 0])
+            )
         elif type(step) is dict:
             for substep, substep_data in step.items():  # e.g., translate: [0, 1, 0]
                 if substep == "translate":
                     mesh.apply_translation(np.array(substep_data))
                 elif substep == "rotate":
-                    rotation_matrix = trimesh.transformations.compose_matrix(angles=substep_data)
+                    rotation_matrix = trimesh.transformations.compose_matrix(
+                        angles=substep_data
+                    )
                     mesh.apply_transform(rotation_matrix)
                 else:
                     raise ValueError(f"Unknown mesh processing substep: '{substep}'")
@@ -275,6 +285,8 @@ def trimesh_to_msg(mesh: trimesh.Trimesh) -> shape_msgs.msg.Mesh:
     """
     mesh_msg = shape_msgs.msg.Mesh()
     mesh_msg.triangles = [shape_msgs.msg.MeshTriangle(list(tri)) for tri in mesh.faces]
-    mesh_msg.vertices = [geometry_msgs.msg.Point(v[0], v[1], v[2]) for v in mesh.vertices]
+    mesh_msg.vertices = [
+        geometry_msgs.msg.Point(v[0], v[1], v[2]) for v in mesh.vertices
+    ]
 
     return mesh_msg
