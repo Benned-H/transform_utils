@@ -1,13 +1,5 @@
 """Define property-based unit tests for the sampling module."""
 
-"""
-Unit tests for the sampling module using Hypothesis.
-Verifies that:
- - The total number of samples equals the requested count.
- - The first sample is the center angle.
- - Each sample is exactly center plus an integer multiple of the step size.
- - The absolute differences follow a paired pattern that increases in equal increments.
-"""
 import numpy as np
 from hypothesis import given
 from hypothesis import strategies as st
