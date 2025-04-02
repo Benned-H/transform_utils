@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from geometry_msgs.msg import Point, Pose, PoseStamped, Transform, TransformStamped, Vector3
 from geometry_msgs.msg import Quaternion as QuaternionMsg
-from transform_utils.kinematics import DEFAULT_FRAME, Point3D, Pose3D, Quaternion
+
+from transform_utils.kinematics import DEFAULT_FRAME, Point3D, Pose2D, Pose3D, Quaternion
 
 
 def point_to_msg(point: Point3D) -> Point:
@@ -42,8 +43,11 @@ def pose_to_msg(pose: Pose3D) -> Pose:
     return Pose(point_to_msg(pose.position), quaternion_to_msg(pose.orientation))
 
 
-def pose_to_stamped_msg(pose: Pose3D) -> PoseStamped:
-    """Convert the given pose into a geometry_msgs/PoseStamped message."""
+def pose_to_stamped_msg(pose: Pose2D | Pose3D) -> PoseStamped:
+    """Convert the given pose (2D or 3D) into a geometry_msgs/PoseStamped message."""
+    if isinstance(pose, Pose2D):
+        pose = Pose3D.from_2d(pose)
+
     msg = PoseStamped()
     msg.header.frame_id = pose.ref_frame
     msg.pose = pose_to_msg(pose)

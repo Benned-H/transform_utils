@@ -29,6 +29,16 @@ class Point3D:
         """Construct a Point3D corresponding to the identity translation."""
         return Point3D(0, 0, 0)
 
+    def to_array(self) -> np.ndarray:
+        """Convert the point to a NumPy array."""
+        return np.array([self.x, self.y, self.z])
+
+    @classmethod
+    def from_array(cls, arr: np.ndarray) -> Point3D:
+        """Construct a Point3D from the given NumPy array."""
+        assert arr.shape == (3,), "3D position must be a three-element vector."
+        return cls(arr[0], arr[1], arr[2])
+
 
 @dataclass
 class Quaternion:
@@ -110,12 +120,40 @@ DEFAULT_FRAME = "map"
 
 
 @dataclass
+class Pose2D:
+    """A position and orientation on the 2D plane."""
+
+    x: float
+    y: float
+    yaw_rad: float
+    ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
+
+    @classmethod
+    def from_list(cls, x_y_yaw: list[float], ref_frame: str = DEFAULT_FRAME) -> Pose2D:
+        """Construct a Pose2D from the given list of X-Y-Yaw data.
+
+        :param x_y_yaw: List of three floats specifying (x,y,yaw)
+        :param ref_frame: Reference frame of the constructed Pose2D
+        :return: Pose2D constructed using the given values
+        """
+        assert len(x_y_yaw) == 3, f"Cannot construct Pose2D from list of length {len(x_y_yaw)}."
+        x, y, yaw_rad = x_y_yaw
+        return Pose2D(x, y, yaw_rad, ref_frame)
+
+
+@dataclass
 class Pose3D:
     """A position and orientation in 3D space."""
 
     position: Point3D
     orientation: Quaternion
     ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
+
+    @property
+    def yaw_rad(self) -> float:
+        """Retrieve the Pose3D's yaw about the z-axis (in radians)."""
+        _, _, yaw_rad = self.orientation.to_euler_rpy()
+        return yaw_rad
 
     @classmethod
     def identity(cls) -> Pose3D:
@@ -137,6 +175,24 @@ class Pose3D:
         """
         inv_transform = np.linalg.inv(self.to_homogeneous_matrix())
         return Pose3D.from_homogeneous_matrix(inv_transform, ref_frame)
+
+    @classmethod
+    def from_2d(cls, pose: Pose2D) -> Pose3D:
+        """Construct a Pose3D from a Pose2D.
+
+        :param pose: Pose in 2D space
+        :return: 3D pose corresponding to the given 2D pose
+        """
+        return Pose3D.from_xyz_rpy(
+            x=pose.x,
+            y=pose.y,
+            yaw_rad=pose.yaw_rad,
+            ref_frame=pose.ref_frame,
+        )
+
+    def to_2d(self) -> Pose2D:
+        """Convert the pose into a 2D pose, discarding any 3D-only information."""
+        return Pose2D(self.position.x, self.position.y, self.yaw_rad, self.ref_frame)
 
     @classmethod
     def from_xyz_rpy(
@@ -174,7 +230,7 @@ class Pose3D:
         :param ref_frame: Reference frame of the constructed Pose3D
         :return: Pose3D constructed using the given values
         """
-        assert len(xyz_rpy) == 6, f"Cannot construct Pose3D from list of length {len(xyz_rpy)}"
+        assert len(xyz_rpy) == 6, f"Cannot construct Pose3D from list of length {len(xyz_rpy)}."
         x, y, z, roll, pitch, yaw = xyz_rpy
         return Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, ref_frame)
 
