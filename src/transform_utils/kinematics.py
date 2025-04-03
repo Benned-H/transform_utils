@@ -29,15 +29,19 @@ class Point3D:
         """Construct a Point3D corresponding to the identity translation."""
         return Point3D(0, 0, 0)
 
-    def to_array(self) -> np.ndarray:
-        """Convert the point to a NumPy array."""
-        return np.array([self.x, self.y, self.z])
-
     @classmethod
     def from_array(cls, arr: np.ndarray) -> Point3D:
         """Construct a Point3D from the given NumPy array."""
         assert arr.shape == (3,), "3D position must be a three-element vector."
         return cls(arr[0], arr[1], arr[2])
+
+    def to_array(self) -> np.ndarray:
+        """Convert the point to a NumPy array."""
+        return np.array([self.x, self.y, self.z])
+
+    def approx_equal(self, other: Point3D) -> bool:
+        """Check whether another point is approximately equal to this point."""
+        return np.allclose(self.to_array(), other.to_array())
 
 
 @dataclass
@@ -68,15 +72,15 @@ class Quaternion:
         """Construct a Quaternion corresponding to the identity rotation."""
         return cls(0, 0, 0, 1)
 
-    def to_array(self) -> np.ndarray:
-        """Convert the quaternion to a NumPy array."""
-        return np.array([self.x, self.y, self.z, self.w])
-
     @classmethod
     def from_array(cls, arr: np.ndarray) -> Quaternion:
         """Construct a quaternion from a NumPy array."""
         assert arr.shape == (4,), "Quaternion must be a four-element vector."
         return cls(arr[0], arr[1], arr[2], arr[3])
+
+    def to_array(self) -> np.ndarray:
+        """Convert the quaternion to a NumPy array."""
+        return np.array([self.x, self.y, self.z, self.w])
 
     @classmethod
     def from_euler_rpy(cls, roll_rad: float, pitch_rad: float, yaw_rad: float) -> Quaternion:
@@ -114,6 +118,19 @@ class Quaternion:
         matrix = quaternion_matrix([self.x, self.y, self.z, self.w])
         assert matrix.shape == (4, 4), f"Homogeneous matrix must be 4x4; was {matrix.shape}."
         return matrix[:3, :3]
+
+    def approx_equal(self, other: Quaternion) -> bool:
+        """Check whether another quaternion is approximately equal to this one.
+
+        Note: A quaternion is considered equal to its negation, which expresses the same rotation.
+        """
+        self_array = self.to_array()
+        other_array = other.to_array()
+
+        pos_case = np.allclose(self_array, other_array)
+        neg_case = np.allclose(-self_array, other_array)
+
+        return pos_case or neg_case
 
 
 DEFAULT_FRAME = "map"
@@ -222,6 +239,15 @@ class Pose3D:
 
         return cls(position, orientation, ref_frame)
 
+    def to_xyz_rpy(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
+        """Convert the pose into the corresponding (x, y, z) and (roll, pitch, yaw) tuples.
+
+        :return: Pair of tuples (x, y, z) and (roll, pitch, yaw) with angles in radians
+        """
+        xyz = (self.position.x, self.position.y, self.position.z)
+        rpy = self.orientation.to_euler_rpy()
+        return (xyz, rpy)
+
     @classmethod
     def from_list(cls, xyz_rpy: list[float], ref_frame: str = DEFAULT_FRAME) -> Pose3D:
         """Construct a Pose3D from the given list of XYZ-RPY data.
@@ -233,15 +259,6 @@ class Pose3D:
         assert len(xyz_rpy) == 6, f"Cannot construct Pose3D from list of length {len(xyz_rpy)}."
         x, y, z, roll, pitch, yaw = xyz_rpy
         return Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, ref_frame)
-
-    def to_xyz_rpy(self) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-        """Convert the pose into the corresponding (x, y, z) and (roll, pitch, yaw) tuples.
-
-        :return: Pair of tuples (x, y, z) and (roll, pitch, yaw) with angles in radians
-        """
-        xyz = (self.position.x, self.position.y, self.position.z)
-        rpy = self.orientation.to_euler_rpy()
-        return (xyz, rpy)
 
     @classmethod
     def from_homogeneous_matrix(cls, matrix: np.ndarray, ref_frame: str = DEFAULT_FRAME) -> Pose3D:
@@ -257,3 +274,9 @@ class Pose3D:
         matrix[:3, :3] = self.orientation.to_rotation_matrix()
         matrix[:3, 3] = [self.position.x, self.position.y, self.position.z]
         return matrix
+
+    def approx_equal(self, other: Pose3D) -> bool:
+        """Check whether another Pose3D is approximately equal to this one."""
+        positions_approx_equal = self.position.approx_equal(other.position)
+        orientations_approx_equal = self.orientation.approx_equal(other.orientation)
+        return positions_approx_equal and orientations_approx_equal
