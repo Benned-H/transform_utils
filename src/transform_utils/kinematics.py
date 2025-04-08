@@ -6,12 +6,8 @@ from dataclasses import dataclass
 from typing import Dict
 
 import numpy as np
-from tf.transformations import (
-    euler_from_quaternion,
-    quaternion_from_euler,
-    quaternion_from_matrix,
-    quaternion_matrix,
-)
+from transforms3d.euler import euler2quat, quat2euler
+from transforms3d.quaternions import mat2quat, quat2mat
 
 Configuration = Dict[str, float]  # Map from joint names to positions (rad or m)
 
@@ -94,30 +90,29 @@ class Quaternion:
         :param yaw_rad: Yaw angle about the z-axis (radians)
         :return: Unit quaternion corresponding to the Euler angles
         """
-        return cls.from_array(quaternion_from_euler(roll_rad, pitch_rad, yaw_rad))
+        w, x, y, z = euler2quat(roll_rad, pitch_rad, yaw_rad, axes="sxyz")
+        return Quaternion(x=x, y=y, z=z, w=w)
 
     def to_euler_rpy(self) -> tuple[float, float, float]:
         """Convert the quaternion to Euler roll, pitch, and yaw angles.
 
         :return: Tuple of (roll, pitch, yaw) angles in radians
         """
-        r, p, y = euler_from_quaternion(self.to_array())
+        r, p, y = quat2euler(q=[self.w, self.x, self.y, self.z], axes="sxyz")
         return (r, p, y)
 
     @classmethod
     def from_rotation_matrix(cls, r_matrix: np.ndarray) -> Quaternion:
         """Construct a quaternion from a 3x3 rotation matrix."""
         assert r_matrix.shape == (3, 3), f"Expected a 3x3 matrix; received {r_matrix.shape}."
-        homogeneous_r_matrix = np.eye(4)
-        homogeneous_r_matrix[:3, :3] = r_matrix
-        q_array = quaternion_from_matrix(homogeneous_r_matrix)
-        return cls.from_array(q_array)
+        w, x, y, z = mat2quat(r_matrix)  # Form of transforms3d quaternions: [w, x, y, z]
+        return Quaternion(x=x, y=y, z=z, w=w)
 
     def to_rotation_matrix(self) -> np.ndarray:
         """Convert the quaternion to a 3x3 rotation matrix."""
-        matrix = quaternion_matrix([self.x, self.y, self.z, self.w])
-        assert matrix.shape == (4, 4), f"Homogeneous matrix must be 4x4; was {matrix.shape}."
-        return matrix[:3, :3]
+        r_matrix = quat2mat(q=[self.w, self.x, self.y, self.z])
+        assert r_matrix.shape == (3, 3), f"Expected 3x3 matrix result but found {r_matrix.shape}."
+        return r_matrix
 
     def approx_equal(self, other: Quaternion) -> bool:
         """Check whether another quaternion is approximately equal to this one.

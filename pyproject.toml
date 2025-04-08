@@ -14,7 +14,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">= 3.8"
 
-dependencies = ["numpy", "trimesh", "pyyaml"]
+dependencies = ["numpy", "transforms3d", "pyyaml", "trimesh"]
 
 [dependency-groups]
 lint = ["ruff"]
