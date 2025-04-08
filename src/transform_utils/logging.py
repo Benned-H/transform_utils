@@ -8,6 +8,9 @@ except ModuleNotFoundError:
     ROS_PRESENT = False
 
 
+import logging
+
+
 def log_info(message: str) -> None:
     """Log a message to the available information output channels.
 
@@ -16,7 +19,8 @@ def log_info(message: str) -> None:
     if ROS_PRESENT:
         rospy.loginfo(message)
     else:
-        print(message)
+        logger = logging.getLogger(__name__)
+        logger.info(message)
 
 
 def log_error(message: str) -> None:
@@ -27,4 +31,5 @@ def log_error(message: str) -> None:
     if ROS_PRESENT:
         rospy.logerr(message)
     else:
-        print(message)
+        logger = logging.getLogger(__name__)
+        logger.error(message)
