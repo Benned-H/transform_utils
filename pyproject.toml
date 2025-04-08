@@ -66,7 +66,9 @@ branch = true                    # Measure branch coverage
 source = ["src", "tests"]        # Measure coverage over these source paths
 
 [tool.coverage.report]
-show_missing = true
+show_missing = false # Do not list any lines missing coverage
+skip_empty = true    # Skip files that have no executable code
+sort = "Cover"       # Sort the coverage report by the "Coverage" column
 format = "markdown"
 
 
