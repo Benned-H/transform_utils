@@ -15,6 +15,7 @@ from moveit_msgs.msg import CollisionObject
 
 from transform_utils.kinematics import DEFAULT_FRAME, Pose2D, Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
+from transform_utils.logging import log_error, log_info
 from transform_utils.ros.ros_utils import resolve_package_path
 from transform_utils.world_model.object_model import ObjectModel
 
@@ -45,15 +46,16 @@ def load_yaml_into_dict(yaml_path: Path) -> dict[str, Any]:
     :return: Dictionary mapping strings to values (empty if the YAML file is nonexistent/invalid)
     """
     if not yaml_path.exists():
-        rospy.logerr(f"The YAML path {yaml_path} doesn't exist!")
+        log_error(f"The YAML path {yaml_path} doesn't exist!")
         return {}
 
     try:
         with yaml_path.open() as yaml_file:
             yaml_data = yaml.safe_load(yaml_file)
-            rospy.loginfo(f"Loaded data from YAML file: {yaml_path}")
+            log_info(f"Loaded data from YAML file: {yaml_path}")
+
     except yaml.YAMLError as error:
-        rospy.logerr(f"Failed to load YAML file: {yaml_path}\nError: {error}")
+        log_error(f"Failed to load YAML file: {yaml_path}\nError: {error}")
         return {}
 
     return yaml_data
@@ -202,7 +204,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
 
     collision_object_msg.operation = CollisionObject.ADD
 
-    rospy.loginfo(f"Loaded object named '{object_name}' within load_object()...")
+    log_info(f"Loaded object named '{object_name}' within load_object()...")
 
     return ObjectModel(collision_object_msg, pose, object_dims)
 
