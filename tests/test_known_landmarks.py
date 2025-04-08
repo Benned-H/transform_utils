@@ -20,7 +20,7 @@ def test_known_landmarks_from_example_yaml(known_landmarks_yaml_path: Path) -> N
     """
     # Arrange: The path to the YAML file is provided via Pytest fixture
 
-    # Act: Create a KnownLandmarks2D instance using the example YAMl file
+    # Act: Create a KnownLandmarks2D instance using the example YAML file
     landmarks_result = KnownLandmarks2D.from_yaml(known_landmarks_yaml_path)
 
     # Assert: Verify that the loaded landmarks match the expected values
