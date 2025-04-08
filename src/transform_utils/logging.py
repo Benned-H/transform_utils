@@ -1,6 +1,11 @@
 """Define utility functions to log messages and errors in a ROS-agnostic manner."""
 
-import rospy
+try:
+    import rospy
+
+    ROS_PRESENT = True
+except ModuleNotFoundError:
+    ROS_PRESENT = False
 
 
 def log_info(message: str) -> None:
@@ -8,7 +13,10 @@ def log_info(message: str) -> None:
 
     :param message: Message to be logged as information
     """
-    rospy.loginfo(message)  # TODO: Define ROS-free version
+    if ROS_PRESENT:
+        rospy.loginfo(message)
+    else:
+        print(message)
 
 
 def log_error(message: str) -> None:
@@ -16,4 +24,7 @@ def log_error(message: str) -> None:
 
     :param message: Message to be logged as an error
     """
-    rospy.logerr(message)  # TODO: Define ROS-free version
+    if ROS_PRESENT:
+        rospy.logerr(message)
+    else:
+        print(message)

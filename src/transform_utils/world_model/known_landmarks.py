@@ -32,7 +32,7 @@ class KnownLandmarks2D:
         yaml_data: dict[str, Any] = load_yaml_into_dict(yaml_path)
 
         # Extract the 'known_landmarks' and 'default_frame' values
-        landmarks_data = yaml_data.get("known_landmarks", [])
+        landmarks_data = yaml_data.get("known_landmarks", {})
         default_frame = yaml_data.get("default_frame", DEFAULT_FRAME)
 
         landmarks = load_named_poses_2d(landmarks_data, default_frame)
