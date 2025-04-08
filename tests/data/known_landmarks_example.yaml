@@ -1,0 +1,7 @@
+known_landmarks:
+  - landmark_a: [1.0, 2.0, 0.0] # (x,y,yaw)
+  - landmark_b:
+      x_y_yaw: [3.0, 4.0, 1.57]
+      frame: custom_frame
+
+default_frame: default_frame

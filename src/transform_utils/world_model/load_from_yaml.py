@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING, Any
 
 import geometry_msgs.msg
 import numpy as np
-import rospy
 import shape_msgs.msg
 import trimesh
 import yaml
