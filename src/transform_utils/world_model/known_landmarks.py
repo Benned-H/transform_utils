@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from transform_utils.filesystem.load_from_yaml import load_named_poses_2d, load_yaml_into_dict
 from transform_utils.kinematics import DEFAULT_FRAME, Pose2D
-from transform_utils.world_model.load_from_yaml import load_named_poses_2d, load_yaml_into_dict
 
 if TYPE_CHECKING:
     from pathlib import Path
