@@ -59,22 +59,23 @@ def load_yaml_into_dict(yaml_path: Path) -> dict[str, Any]:
     return yaml_data
 
 
-def load_named_poses_2d(poses_data: dict[str, Any], default_frame: str) -> dict[str, Pose2D]:
+def load_named_poses_2d(landmarks_data: list[Any], default_frame: str) -> dict[str, Pose2D]:
     """Load a collection of named 2D poses from data imported from YAML.
 
-    :param poses_data: Dictionary mapping robot/object/location names to 2D pose data
+    :param landmarks_data: List of dictionaries, each mapping a location name to 2D pose data
     :param default_frame: Reference frame used for any poses without a specified frame
     :return: Map from robot/object/location names to 2D poses
     """
     named_poses: dict[str, Pose2D] = {}
 
-    for name, pose_data in poses_data.items():
-        if isinstance(pose_data, list):  # Pose represented as [x, y, yaw] list
-            named_poses[name] = Pose2D.from_list(pose_data, ref_frame=default_frame)
-        elif isinstance(pose_data, dict):  # Pose with reference frame specified
-            ref_frame: str = pose_data.get("frame", default_frame)
-            pose_list = pose_data["x_y_yaw"]
-            named_poses[name] = Pose2D.from_list(pose_list, ref_frame=ref_frame)
+    for landmark_data in landmarks_data:
+        for name, pose_data in landmark_data.items():
+            if isinstance(pose_data, list):  # Pose represented as [x, y, yaw] list
+                named_poses[name] = Pose2D.from_list(pose_data, ref_frame=default_frame)
+            elif isinstance(pose_data, dict):  # Pose with reference frame specified
+                ref_frame: str = pose_data.get("frame", default_frame)
+                pose_list = pose_data["x_y_yaw"]
+                named_poses[name] = Pose2D.from_list(pose_list, ref_frame=ref_frame)
 
     return named_poses
 
