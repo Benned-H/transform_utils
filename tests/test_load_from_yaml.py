@@ -3,7 +3,7 @@
 import tempfile
 from pathlib import Path
 
-from transform_utils.world_model.load_from_yaml import load_yaml_into_dict
+from transform_utils.filesystem.load_from_yaml import load_yaml_into_dict
 
 
 def test_load_yaml_into_dict_file_not_found() -> None:
