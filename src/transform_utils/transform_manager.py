@@ -133,7 +133,8 @@ class TransformManager:
         if tf_stamped_msg is None:
             rospy.logerr(
                 f"[TransformManager.lookup_transform] Could not look up transform "
-                f"from {source_frame} to {target_frame} at time {when.to_time():.2f}",
+                f"from {source_frame} to {target_frame} at time {when.to_time():.2f}. "
+                "Have you forgotten to call TransformManager.init_node()?",
             )
             return None
 

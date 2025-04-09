@@ -98,7 +98,7 @@ class Quaternion:
 
         :return: Tuple of (roll, pitch, yaw) angles in radians
         """
-        r, p, y = quat2euler(q=[self.w, self.x, self.y, self.z], axes="sxyz")
+        r, p, y = quat2euler(quaternion=[self.w, self.x, self.y, self.z], axes="sxyz")
         return (r, p, y)
 
     @classmethod
