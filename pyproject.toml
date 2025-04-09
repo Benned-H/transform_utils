@@ -63,7 +63,7 @@ pythonpath = ["."]    # Added to Python search path
 [tool.coverage.run]
 data_file = ".coverage/combined"
 branch = true                    # Measure branch coverage
-source = ["src", "tests"]        # Measure coverage over these source paths
+source = ["src"]                 # Measure coverage over these source paths
 
 [tool.coverage.report]
 show_missing = false # Do not list any lines missing coverage
