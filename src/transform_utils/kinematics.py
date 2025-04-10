@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Any, Dict
 
 import numpy as np
 from transforms3d.euler import euler2quat, quat2euler
@@ -269,6 +269,27 @@ class Pose3D:
         matrix[:3, :3] = self.orientation.to_rotation_matrix()
         matrix[:3, 3] = [self.position.x, self.position.y, self.position.z]
         return matrix
+
+    @classmethod
+    def from_yaml(cls, pose_data: list[float] | dict[str, Any], default_frame: str) -> Pose3D:
+        """Construct a Pose3D instance from data imported from YAML.
+
+        :param pose_data: List or dictionary of YAML data representing a pose
+        :param default_frame: Default reference frame to use if the YAML doesn't specify one
+        :return: Constructed Pose3D instance
+        :raises: TypeError if the pose data has an unexpected type
+        """
+        if isinstance(pose_data, list):  # Pose represented as XYZ-RPY list
+            ref_frame = default_frame
+            pose_list = pose_data
+        elif isinstance(pose_data, dict):  # Pose with reference frame specified
+            ref_frame = pose_data.get("frame", default_frame)
+            pose_list = pose_data["xyz_rpy"]
+        else:
+            error_msg = f"Pose3D.from_yaml() cannot process type {type(pose_data)}."
+            raise TypeError(error_msg)
+
+        return Pose3D.from_list(xyz_rpy=pose_list, ref_frame=ref_frame)
 
     def approx_equal(self, other: Pose3D) -> bool:
         """Check whether another Pose3D is approximately equal to this one."""
