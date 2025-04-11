@@ -73,26 +73,3 @@ def load_named_poses(poses_data: dict[str, Any], default_frame: str) -> dict[str
             named_poses[name] = Pose3D.from_list(pose_list, ref_frame=ref_frame)
 
     return named_poses
-
-
-def load_apriltag_relative_transforms_from_yaml(yaml_path: Path) -> dict[str, Pose3D]:
-    """Load a set of AprilTag-to-object relative transforms from YAML.
-
-    :param yaml_path: Path to a YAML file specifying the relative transforms
-    :return: Map from object name to the relevant AprilTag-relative parent transform
-    """
-    yaml_data = load_yaml_into_dict(yaml_path)
-    assert "transforms" in yaml_data, f"Expected a top-level 'transforms' key in file {yaml_data}"
-
-    transforms_dict = {}
-
-    for tag_name, tag_data in yaml_data["transforms"].items():
-        assert "object" in tag_data, f"Missing 'object' key under tag {tag_name}."
-        assert "relative_pose" in tag_data, f"Missing 'relative_pose' key under tag {tag_name}."
-        object_name = tag_data["object"]
-
-        # Convert the YAML data into the object's AprilTag-relative pose
-        relative_pose = Pose3D.from_list(tag_data["relative_pose"], ref_frame=tag_name)
-        transforms_dict[object_name] = relative_pose
-
-    return transforms_dict
