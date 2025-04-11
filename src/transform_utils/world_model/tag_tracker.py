@@ -2,33 +2,60 @@
 
 from pathlib import Path
 
-from transform_utils.filesystem.load_from_yaml import load_apriltag_relative_transforms_from_yaml
+import rospy
+from ar_track_alvar_msgs.msg import AlvarMarkers
+
+from transform_utils.kinematics_ros import pose_from_msg
+from transform_utils.world_model.april_tag import AprilTagSystem
 
 
 class TagTracker:
     """A class that stores and re-publishes the poses of detected AR tags."""
 
-    def __init__(self, tags_yaml: Path) -> None:
-        """Initialize the TagTracker by populating its list of known AprilTags.
+    def __init__(self) -> None:
+        """Initialize the TagTracker with empty member variables."""
+        self.tag_system: AprilTagSystem | None = None  # Known AprilTags and their detecting cameras
 
-        :param tags_yaml: Path to a YAML file specifying AprilTag IDs and sizes
+        self.marker_subs: list[rospy.Subscriber] = []
+
+    def populate_from_yaml(self, yaml_path: Path) -> None:
+        """Populate the TagTracker's tags, cameras, and ROS subscribers from YAML.
+
+        :param yaml_path: Path to a YAML file specifying AprilTag data
         """
+        self.tag_system = AprilTagSystem.from_yaml(yaml_path)
 
+        # Populate the ROS subscribers based on the imported tags and camera names
+        for camera_name in self.tag_system.camera_detects_tags:
+            self.marker_subs.append(
+                rospy.Subscriber(
+                    f"{self.tag_system.camera_topic_prefix}{camera_name}",
+                    AlvarMarkers,
+                    callback=self.marker_callback,
+                    callback_args=camera_name,
+                    queue_size=5,
+                ),
+            )
 
-#     def __init__(self) -> None:
-#         """Initialize the TagTracker by retrieving expected tag sizes from ROS parameters."""
-#         self.tag_poses: dict[int, Pose3D] = {}
+    def marker_callback(self, markers_msg: AlvarMarkers, camera_name: str) -> None:
+        """Handle new AR marker detections from the named camera.
 
-#         self._body_cam_marker_size_cm = rospy.get_param("/spot/ar/body_cam_marker_size_cm")
-#         self._hand_cam_marker_size_cm = rospy.get_param("/spot/ar/hand_cam_marker_size_cm")
+        :param markers_msg: Message containing a list of tag detections
+        :param camera_name: Name of the camera source of the detections
+        """
+        assert camera_name in self.tag_system.camera_detects_tags, (
+            f"Unrecognized camera name: {camera_name}."
+        )
 
-#     def marker_callback(self, markers_msg: AlvarMarkers) -> None:
-#         """Store updated tag poses from detected AR markers.
+        for marker in markers_msg.markers:
+            if marker.id not in self.tag_system.camera_detects_tags[camera_name]:
+                continue  # Move to the next marker detection
 
-#         :param markers_msg: Message containing a list of tag detections
-#         """
-#         for marker in markers_msg.markers:
-#             rospy.loginfo(f"Detected Marker ID: {marker.id} with confidence {marker.confidence}.")
-#             self.tag_poses[marker.id] = pose_from_msg(marker.pose)
+            tag_size_cm = self.tag_system.tags[marker.id].size_cm
 
-#         # TODO: Filter which poses are trusted based on the actual tag size and camera name
+            rospy.loginfo(
+                f"Marker ID {marker.id} (size {tag_size_cm} cm) was detected by camera "
+                f"'{camera_name}' with confidence {marker.confidence}.",
+            )
+
+            self.tag_system.tags[marker.id].pose = pose_from_msg(marker.pose)  # Update tag's pose

@@ -1,11 +1,24 @@
-# Specify AprilTag-object relative transforms to be used in pose estimation
-transforms:
-  tag-39:
-    tag_size_cm: 4.0 # Size (cm) of the tag along one side of its black square
-    object: "expo_spray"
-    relative_pose: [1, 2, 3, 0, 0, 0] # Object's pose w.r.t. the AprilTag
+# Specify AprilTag-object relative transforms, tag sizes, and which cameras detect which tag sizes
+tags:
+  tag_1:
+    tag_size_cm: 3.3 # Size (cm) of the tag along one side of its black square
+    relative_frames:
+      expo_spray: [1, 2, 3, 0, 0, 0] # Object's pose w.r.t. the AprilTag
 
-  tag-41:
-    tag_size_cm: 10.1
-    object: "table1"
-    relative_pose: [4, 5, 6, 0, 0, 0]
+  tag_101:
+    tag_size_cm: 4.4
+    relative_frames:
+      table: [4, 5, 6, 0, 0, 0]
+
+# Each camera can detect tags of one or more specific sizes
+cameras:
+  hand:
+    recognized_tag_sizes_cm: [3.3]
+
+  frontleft:
+    recognized_tag_sizes_cm: [4.4]
+
+  right:
+    recognized_tag_sizes_cm: [3.3, 4.4]
+
+camera_topic_prefix: "/ar_track_alvar/camera/"
