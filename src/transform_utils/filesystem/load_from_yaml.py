@@ -8,6 +8,7 @@ import yaml
 
 from transform_utils.kinematics import Pose2D, Pose3D
 from transform_utils.logging import log_error, log_info
+from transform_utils.world_model.april_tag import AprilTag
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -82,7 +83,7 @@ def load_apriltag_relative_transforms_from_yaml(yaml_path: Path) -> dict[str, Po
     :return: Map from object name to the relevant AprilTag-relative parent transform
     """
     yaml_data = load_yaml_into_dict(yaml_path)
-    assert "transforms" in yaml_data, f"Expected a top-level 'transforms' key in file {yaml_data}"
+    assert "transforms" in yaml_data, f"Expected a top-level 'transforms' key in file {yaml_data}."
 
     transforms_dict = {}
 

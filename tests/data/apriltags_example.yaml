@@ -1,9 +1,11 @@
 # Specify AprilTag-object relative transforms to be used in pose estimation
 transforms:
   tag-39:
+    tag_size_cm: 4.0 # Size (cm) of the tag along one side of its black square
     object: "expo_spray"
     relative_pose: [1, 2, 3, 0, 0, 0] # Object's pose w.r.t. the AprilTag
 
   tag-41:
+    tag_size_cm: 10.1
     object: "table1"
     relative_pose: [4, 5, 6, 0, 0, 0]
