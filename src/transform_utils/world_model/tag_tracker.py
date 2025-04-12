@@ -1,29 +1,26 @@
 """Define a class to manage the tracking of detected AprilTag poses and dependent objects."""
 
-from pathlib import Path
+import threading
 
 import rospy
 from ar_track_alvar_msgs.msg import AlvarMarkers
 
 from transform_utils.kinematics_ros import pose_from_msg
+from transform_utils.transform_manager import TransformManager
 from transform_utils.world_model.april_tag import AprilTagSystem
 
 
 class TagTracker:
     """A class that stores and re-publishes the poses of detected AR tags."""
 
-    def __init__(self) -> None:
-        """Initialize the TagTracker with empty member variables."""
-        self.tag_system: AprilTagSystem | None = None  # Known AprilTags and their detecting cameras
+    def __init__(self, tag_system: AprilTagSystem) -> None:
+        """Initialize the TagTracker for a system of AprilTags and cameras.
+
+        :param tag_system: System of known AprilTags and cameras to detect them
+        """
+        self.tag_system = tag_system
 
         self.marker_subs: list[rospy.Subscriber] = []
-
-    def populate_from_yaml(self, yaml_path: Path) -> None:
-        """Populate the TagTracker's tags, cameras, and ROS subscribers from YAML.
-
-        :param yaml_path: Path to a YAML file specifying AprilTag data
-        """
-        self.tag_system = AprilTagSystem.from_yaml(yaml_path)
 
         # Populate the ROS subscribers based on the imported tags and camera names
         for camera_name in self.tag_system.camera_detects_tags:
@@ -36,6 +33,10 @@ class TagTracker:
                     queue_size=5,
                 ),
             )
+
+        self._tf_publisher_thread = threading.Thread(target=self._publish_frames_loop)
+        self._tf_publisher_thread.daemon = True  # Thread exits when main process does
+        self._tf_publisher_thread.start()
 
     def marker_callback(self, markers_msg: AlvarMarkers, camera_name: str) -> None:
         """Handle new AR marker detections from the named camera.
@@ -59,3 +60,19 @@ class TagTracker:
             )
 
             self.tag_system.tags[marker.id].pose = pose_from_msg(marker.pose)  # Update tag's pose
+
+    def _publish_frames_loop(self) -> None:
+        """Publish the known AprilTags' poses (and dependent objects') frames to /tf."""
+        try:
+            rate_hz = rospy.Rate(TransformManager.loop_hz)
+            while not rospy.is_shutdown():
+                for tag in self.tag_system.tags.values():
+                    if tag.pose is not None:
+                        TransformManager.broadcast_transform(tag.frame_name, tag.pose)
+
+                        for obj_name, relative_pose in tag.relative_frames.items():
+                            TransformManager.broadcast_transform(obj_name, relative_pose)
+                rate_hz.sleep()
+
+        except rospy.ROSInterruptException as ros_exc:
+            rospy.logwarn(f"[TagTracker._publish_frames_loop] {ros_exc}")

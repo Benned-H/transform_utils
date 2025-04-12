@@ -42,6 +42,11 @@ class AprilTag:
 
         return output_tag
 
+    @property
+    def frame_name(self) -> str:
+        """Retrieve the name of the /tf frame defined by this AprilTag."""
+        return f"tag_{self.id}"
+
 
 @dataclass
 class AprilTagSystem:
