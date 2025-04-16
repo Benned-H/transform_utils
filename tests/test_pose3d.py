@@ -40,7 +40,7 @@ def test_pose3d_from_yaml(poses_yaml_data: dict[str, Any]) -> None:
     # Act: Convert each pose from YAML data into a Pose3D instance
     loaded_poses: dict[str, Pose3D] = {}
     for pose_name, pose_data in poses_yaml_data.items():
-        loaded_poses[pose_name] = Pose3D.from_yaml(pose_data)
+        loaded_poses[pose_name] = Pose3D.from_yaml(pose_data, default_frame=DEFAULT_FRAME)
 
     # Assert: Verify that the loaded Pose3D instances match the expected values
     for pose_name, expected_pose in expected_poses.items():
