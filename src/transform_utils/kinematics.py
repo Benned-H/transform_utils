@@ -273,7 +273,7 @@ class Pose3D:
     @classmethod
     def from_yaml(cls, pose_data: list[float] | dict[str, Any], default_frame: str) -> Pose3D:
         """Construct a Pose3D instance from data imported from YAML.
-        
+
         :param pose_data: List or dictionary of YAML data representing a pose
         :param default_frame: Default reference frame to use if the YAML doesn't specify one
         :return: Constructed Pose3D instance
