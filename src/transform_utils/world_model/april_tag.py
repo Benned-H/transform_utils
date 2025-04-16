@@ -52,7 +52,7 @@ class AprilTag:
 class AprilTagSystem:
     """A system of known AprilTags and tag-detecting cameras."""
 
-    tags: dict[int, AprilTag]  # Maps tag IDs to AprilTag instances
+    tags: dict[int, AprilTag]  # Map tag IDs to AprilTag instances
     camera_detects_tags: dict[str, set[int]]  # Map camera names to the tags they can detect
     camera_topic_prefix: str  # Prefix for AR marker detection ROS topics
 
@@ -69,8 +69,7 @@ class AprilTagSystem:
         topic_prefix = yaml_data.get("camera_topic_prefix", "")
         system = AprilTagSystem(tags={}, camera_detects_tags={}, camera_topic_prefix=topic_prefix)
 
-        tags_data = yaml_data["tags"]
-        for tag_name, tag_data in tags_data.items():
+        for tag_name, tag_data in yaml_data["tags"].items():
             new_tag = AprilTag.from_yaml(tag_name, tag_data)
             system.tags[new_tag.id] = new_tag
 
