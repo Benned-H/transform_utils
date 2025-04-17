@@ -54,7 +54,7 @@ class TagTracker:
                         f"{self.tag_system.camera_topic_prefix}/{camera_name}/bundle",
                         AlvarMarkers,
                         callback=self.marker_callback,
-                        callback_args=(),
+                        callback_args=callback_args,
                         queue_size=5,
                     ),
                 )
@@ -74,7 +74,7 @@ class TagTracker:
             return
 
         for marker in markers_msg.markers:
-            if marker.id not in self.tag_system.camera_detects_tags[camera_name]:
+            if marker.id not in self.tag_system.camera_detects_tags[args.camera_name]:
                 continue  # Move to the next marker detection
 
             tag = self.tag_system.tags[marker.id]
