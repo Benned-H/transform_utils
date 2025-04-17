@@ -35,6 +35,17 @@ class Point3D:
         """Convert the point to a NumPy array."""
         return np.array([self.x, self.y, self.z])
 
+    @classmethod
+    def from_homogeneous_coordinate(cls, arr: np.ndarray) -> Point3D:
+        """Construct a Point3D from a homogeneous coordinate represented as a NumPy array."""
+        assert arr.shape == (4,), "A homogeneous coordinate must be a four-element vector."
+        xyz_arr = arr[:3] / arr[3]
+        return cls.from_array(xyz_arr)
+
+    def to_homogeneous_coordinate(self) -> np.ndarray:
+        """Convert the 3D point to a homogeneous coordinate as a NumPy array."""
+        return np.array([self.x, self.y, self.z, 1.0])
+
     def approx_equal(self, other: Point3D) -> bool:
         """Check whether another point is approximately equal to this point."""
         return np.allclose(self.to_array(), other.to_array())
@@ -172,12 +183,43 @@ class Pose3D:
         """Construct a Pose3D corresponding to the identity transformation."""
         return Pose3D(Point3D.identity(), Quaternion.identity())
 
-    def __matmul__(self, other: Pose3D) -> Pose3D:
+    def _matrix_multiply_with_pose_3d(self, other: Pose3D) -> Pose3D:
         """Multiply the homogeneous transformation matrices of this pose and another pose."""
         m1 = self.to_homogeneous_matrix()
         m2 = other.to_homogeneous_matrix()
         result_ref_frame = self.ref_frame  # Result takes the "leftmost" reference frame
         return Pose3D.from_homogeneous_matrix(m1 @ m2, result_ref_frame)
+
+    def _matrix_multiply_with_point_3d(self, point: Point3D) -> Point3D:
+        """Multiply the given position by this pose, thereby changing its relative frame.
+
+        If we have some pose with frame 'a' (pose_w_a) and position in frame 'a' (position_a_p),
+            we can multiply:    pose_w_a @ position_a_p = position_w_p.
+
+        :param point: Position in 3D space
+        :return: Position converted into this pose's relative frame.
+        """
+        homogeneous_result = self.to_homogeneous_matrix() @ point.to_homogeneous_coordinate()
+        return Point3D.from_homogeneous_coordinate(homogeneous_result)
+
+    def __matmul__(self, other: Pose3D | Point3D) -> Pose3D | Point3D:
+        """Multiply the homogeneous transformation matrix of this pose with another pose or point.
+
+        :param other: Either another pose or a 3D position
+        :return: Result of the homogeneous transformation matrix multiplication.
+        """
+        if isinstance(other, Pose3D):
+            return self._matrix_multiply_with_pose_3d(other)
+        if isinstance(other, Point3D):
+            return self._matrix_multiply_with_point_3d(other)
+        return NotImplemented
+
+    # def __matmul__(self, other: Pose3D) -> Pose3D:
+    #     """Multiply the homogeneous transformation matrices of this pose and another pose."""
+    #     m1 = self.to_homogeneous_matrix()
+    #     m2 = other.to_homogeneous_matrix()
+    #     result_ref_frame = self.ref_frame  # Result takes the "leftmost" reference frame
+    #     return Pose3D.from_homogeneous_matrix(m1 @ m2, result_ref_frame)
 
     def inverse(self, ref_frame: str) -> Pose3D:
         """Compute the pose corresponding to the inverse transformation of this pose.
@@ -255,6 +297,14 @@ class Pose3D:
         x, y, z, roll, pitch, yaw = xyz_rpy
         return Pose3D.from_xyz_rpy(x, y, z, roll, pitch, yaw, ref_frame)
 
+    def to_list(self) -> list[float]:
+        """Convert the pose into a list of x, y, z, roll (radians), pitch, and yaw values.
+
+        :return: List of six floats representing the 3D pose
+        """
+        (x, y, z), (roll_rad, pitch_rad, yaw_rad) = self.to_xyz_rpy()
+        return [x, y, z, roll_rad, pitch_rad, yaw_rad]
+
     @classmethod
     def from_homogeneous_matrix(cls, matrix: np.ndarray, ref_frame: str = DEFAULT_FRAME) -> Pose3D:
         """Construct a Pose3D from a 4x4 homogeneous transformation matrix."""
@@ -290,6 +340,13 @@ class Pose3D:
             raise TypeError(error_msg)
 
         return Pose3D.from_list(xyz_rpy=pose_list, ref_frame=ref_frame)
+
+    def to_yaml_dict(self) -> dict[str, Any]:
+        """Convert the pose into a dictionary suitable for export to YAML.
+
+        :return: Dictionary containing the pose's data and reference frame
+        """
+        return {"xyz_rpy": self.to_list(), "frame": self.ref_frame}
 
     def approx_equal(self, other: Pose3D) -> bool:
         """Check whether another Pose3D is approximately equal to this one."""
