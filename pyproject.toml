@@ -19,7 +19,7 @@ dependencies = ["numpy", "transforms3d", "pyyaml", "trimesh"]
 [dependency-groups]
 lint = ["ruff"]
 tests = ["pytest", "coverage", "hypothesis"]
-types = ["mypy", "typing-extensions"]
+types = ["mypy", "typing-extensions", "types-PyYAML"]
 
 
 [tool.uv]
