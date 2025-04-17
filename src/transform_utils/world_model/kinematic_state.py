@@ -18,6 +18,7 @@ class KinematicState:
     object_poses: dict[str, Pose3D | None]  # 3D poses of known objects (None if pose unknown)
     robot_base_poses: dict[str, Pose2D]  # Base poses of robots in the world
     robot_configurations: dict[str, Configuration]  # Configurations of the robots in the world
+    object_is_static: dict[str, bool]  # Maps object names to whether they're static (cannot move)
 
     def get_object_pose(self, obj_name: str) -> Pose3D | None:
         """Retrieve the pose of the named object.
@@ -42,6 +43,12 @@ class KinematicState:
         if obj_name not in self.object_poses:
             error = f"Cannot set pose of unknown object: '{obj_name}'."
             raise KeyError(error)
+
+        # Don't allow changing a static object's pose (if the pose is already known)
+        curr_pose = self.object_poses[obj_name]
+        if self.object_is_static[obj_name] and curr_pose is not None:
+            error = f"Cannot change the pose of static object '{obj_name}'."
+            raise ValueError(error)
 
         self.object_poses[obj_name] = new_pose
 
