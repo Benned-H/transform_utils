@@ -1,0 +1,37 @@
+# Specify AprilTag-to-object relative transforms, tag sizes, which cameras detect which sizes, etc.
+# NOTE: This file is NOT meant for our ROS system. It's used to unit test the YAML import code
+tags:
+  tag_60:
+    tag_size_cm: 4.0 # Size (cm) of the tag along one side of its black square
+    relative_frames:
+      expo_spray: [0.1, 0, 0, 0, 0, 0] # Object pose w.r.t. the AprilTag
+
+  tag_51:
+    tag_size_cm: 18.5
+    relative_frames:
+      table: [-0.1, 0, -0.5, 1.5708, 0, 0]
+
+  tag_1:
+    tag_size_cm: 7.62
+    relative_frames:
+      cabinet_handle: [0.32, 0.24, 0.18, 0, 0, 0]
+    bundle: True
+
+# Each camera can detect tags of one or more specific sizes
+cameras:
+  hand:
+    recognized_tag_sizes_cm: [4.0, 7.62]
+    detects_single_tags: True
+    detects_bundles: True
+
+  frontleft:
+    recognized_tag_sizes_cm: [7.62, 18.5]
+    detects_single_tags: True
+    detects_bundles: True
+
+  frontright:
+    recognized_tag_sizes_cm: [7.62, 18.5]
+    detects_single_tags: True
+    detects_bundles: True
+
+camera_topic_prefix: "/ar_pose_marker"

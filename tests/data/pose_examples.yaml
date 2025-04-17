@@ -1,0 +1,9 @@
+# Example Pose3D instances specified via YAML
+
+poses:
+  pose_a: [3, 2, 1, 0, 0.7854, 0] # Pitch: 45 degrees
+  pose_b:
+    xyz_rpy: [0, 2, 1, 0, 0, 0]
+  pose_c:
+    xyz_rpy: [4, 5, 6, 0, 0, 0]
+    frame: "frame_c"
