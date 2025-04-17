@@ -19,6 +19,7 @@ class AprilTag:
     size_cm: float  # Size (in centimeters) of one side of the tag's black square
     pose: Pose3D | None  # Estimated pose of the AprilTag (None if unknown)
     relative_frames: dict[str, Pose3D]  # Object frames w.r.t. the AprilTag
+    in_bundle: bool  # Specifies whether the tag is part of a larger bundle
 
     @classmethod
     def from_yaml(cls, tag_name: str, tag_data: dict[str, Any]) -> AprilTag:
@@ -33,7 +34,14 @@ class AprilTag:
 
         tag_id = int(tag_name[4:])
         tag_size_cm = tag_data["tag_size_cm"]
-        output_tag = AprilTag(id=tag_id, size_cm=tag_size_cm, pose=None, relative_frames={})
+        in_bundle = tag_data.get("bundle", False)
+        output_tag = AprilTag(
+            id=tag_id,
+            size_cm=tag_size_cm,
+            pose=None,
+            relative_frames={},
+            in_bundle=in_bundle,
+        )
 
         frames = tag_data.get("relative_frames", {})  # Map from frame names to relative poses
         for child_frame_name, pose_data in frames.items():
@@ -49,10 +57,54 @@ class AprilTag:
 
 
 @dataclass
+class TagDetectingCamera:
+    """A camera that detects AR markers."""
+
+    recognized_tag_sizes_cm: set[float]  # Sizes of AR markers detected by the camera
+    detects_single_tags: bool  # Whether this camera is configured to detect single tags
+    detects_bundles: bool  # Whether this camera is configured to detect bundles of tags
+
+    @classmethod
+    def from_yaml(cls, camera_name: str, camera_data: dict[str, Any]) -> TagDetectingCamera:
+        """Construct a TagDetectingCamera instance from imported YAML data.
+
+        :param camera_name: Name of the camera (e.g., "hand")
+        :param camera_data: Camera data imported from YAML
+        :return: Constructed TagDetectingCamera instance
+        """
+        required_keys = ["recognized_tag_sizes_cm", "detects_single_tags", "detects_bundles"]
+        for key in required_keys:
+            assert key in camera_data, f"Expected key '{key}' in data for camera '{camera_name}'."
+
+        recognized_sizes_cm: set[float] = set(camera_data["recognized_tag_sizes_cm"])
+        detects_single = bool(camera_data["detects_single_tags"])
+        detects_bundle = bool(camera_data["detects_bundles"])
+
+        return TagDetectingCamera(
+            recognized_tag_sizes_cm=recognized_sizes_cm,
+            detects_single_tags=detects_single,
+            detects_bundles=detects_bundle,
+        )
+
+    def can_recognize_tag(self, tag: AprilTag) -> bool:
+        """Evaluate whether the camera, as configured, can recognize the given tag.
+
+        :param tag: An AR marker with some size (cm), possibly in a tag bundle
+        :return: True if the camera can recognize the tag, else False
+        """
+        size_ok = any(isclose(tag.size_cm, size_cm) for size_cm in self.recognized_tag_sizes_cm)
+        bundle_ok = self.detects_bundles or (not tag.in_bundle)
+        single_ok = self.detects_single_tags or tag.in_bundle
+
+        return size_ok and bundle_ok and single_ok
+
+
+@dataclass
 class AprilTagSystem:
     """A system of known AprilTags and tag-detecting cameras."""
 
     tags: dict[int, AprilTag]  # Map tag IDs to AprilTag instances
+    cameras: dict[str, TagDetectingCamera]  # Map camera names to TagDetectingCamera instances
     camera_detects_tags: dict[str, set[int]]  # Map camera names to the tags they can detect
     camera_topic_prefix: str  # Prefix for AR marker detection ROS topics
 
@@ -67,7 +119,7 @@ class AprilTagSystem:
         assert "tags" in yaml_data, f"Expected key 'tags' in YAML file {yaml_path}."
 
         topic_prefix = yaml_data.get("camera_topic_prefix", "")
-        system = AprilTagSystem(tags={}, camera_detects_tags={}, camera_topic_prefix=topic_prefix)
+        system = AprilTagSystem({}, {}, {}, topic_prefix)
 
         for tag_name, tag_data in yaml_data["tags"].items():
             new_tag = AprilTag.from_yaml(tag_name, tag_data)
@@ -75,14 +127,12 @@ class AprilTagSystem:
 
         assert "cameras" in yaml_data, f"Expected key 'cameras' in YAML file {yaml_path}."
         for camera_name, camera_data in yaml_data["cameras"].items():
+            camera = TagDetectingCamera.from_yaml(camera_name, camera_data)
+            system.cameras[camera_name] = camera
             system.camera_detects_tags[camera_name] = set()
 
-            # Check if each tag's size is approximately one that this camera recognizes
-            recognized_sizes_cm: set[float] = set(camera_data["recognized_tag_sizes_cm"])
             for tag in system.tags.values():
-                for recognized_size_cm in recognized_sizes_cm:
-                    if isclose(tag.size_cm, recognized_size_cm):
-                        system.camera_detects_tags[camera_name].add(tag.id)
-                        break  # Move to the next AprilTag
+                if camera.can_recognize_tag(tag):
+                    system.camera_detects_tags[camera_name].add(tag.id)
 
         return system
