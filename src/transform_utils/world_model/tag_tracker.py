@@ -1,6 +1,7 @@
 """Define a class to manage the tracking of detected AprilTag poses and dependent objects."""
 
 import threading
+from dataclasses import dataclass
 
 import rospy
 from ar_track_alvar_msgs.msg import AlvarMarkers
@@ -8,6 +9,14 @@ from ar_track_alvar_msgs.msg import AlvarMarkers
 from transform_utils.kinematics_ros import pose_from_msg
 from transform_utils.transform_manager import TransformManager
 from transform_utils.world_model.april_tag import AprilTagSystem
+
+
+@dataclass
+class MarkerCallbackArgs:
+    """A data structure organizing arguments of the TagTracker.marker_callback() method."""
+
+    camera_name: str  # Name of the camera source of a tag detection
+    bundle: bool  # Whether the ROS topic contains bundle-based detections
 
 
 class TagTracker:
@@ -25,25 +34,27 @@ class TagTracker:
         # Populate the ROS subscribers based on the imported tags and camera names
         for camera_name, camera in self.tag_system.cameras.items():
             if camera.detects_single_tags:
-                topic_name = f"{self.tag_system.camera_topic_prefix}/{camera_name}/single"
+                callback_args = MarkerCallbackArgs(camera_name, bundle=False)
+
                 self.marker_subs.append(
                     rospy.Subscriber(
-                        topic_name,
+                        f"{self.tag_system.camera_topic_prefix}/{camera_name}/single",
                         AlvarMarkers,
                         callback=self.marker_callback,
-                        callback_args=topic_name,
+                        callback_args=callback_args,
                         queue_size=5,
                     ),
                 )
 
             if camera.detects_bundles:
-                topic_name = f"{self.tag_system.camera_topic_prefix}/{camera_name}/bundle"
+                callback_args = MarkerCallbackArgs(camera_name, bundle=True)
+
                 self.marker_subs.append(
                     rospy.Subscriber(
-                        topic_name,
+                        f"{self.tag_system.camera_topic_prefix}/{camera_name}/bundle",
                         AlvarMarkers,
                         callback=self.marker_callback,
-                        callback_args=topic_name,
+                        callback_args=(),
                         queue_size=5,
                     ),
                 )
@@ -52,27 +63,27 @@ class TagTracker:
         self._tf_publisher_thread.daemon = True  # Thread exits when main process does
         self._tf_publisher_thread.start()
 
-    def marker_callback(self, markers_msg: AlvarMarkers, camera_name: str, bundle: bool) -> None:
+    def marker_callback(self, markers_msg: AlvarMarkers, args: MarkerCallbackArgs) -> None:
         """Handle new AR marker detections from the named camera.
 
         :param markers_msg: Message containing a list of tag detections
-        :param camera_name: Name of the camera source of the detections
-        :param bundle: Whether this topic corresponds to bundled markers
+        :param args: Data structure organizing arguments to the callback
         """
-        if camera_name not in self.tag_system.cameras:
-            rospy.logwarn(f"Unrecognized camera name: {camera_name}.")
+        if args.camera_name not in self.tag_system.cameras:
+            rospy.logwarn(f"Unrecognized camera name: '{args.camera_name}'.")
+            return
 
         for marker in markers_msg.markers:
             if marker.id not in self.tag_system.camera_detects_tags[camera_name]:
                 continue  # Move to the next marker detection
 
-            actual_tag = self.tag_system.tags[marker.id]
-            if actual_tag.in_bundle != bundle:
+            tag = self.tag_system.tags[marker.id]
+            if tag.in_bundle != args.bundle:
                 continue  # Ensure that single-tag detections aren't used for bundled markers
 
             rospy.loginfo(
-                f"Marker ID {marker.id} (size {actual_tag.size_cm} cm) was detected by camera "
-                f"'{camera_name}' with confidence {marker.confidence}.",
+                f"Marker ID {marker.id} (size {tag.size_cm} cm) was detected by camera "
+                f"'{args.camera_name}' with confidence {marker.confidence}.",
             )
 
             self.tag_system.tags[marker.id].pose = pose_from_msg(marker.pose)  # Update tag's pose
