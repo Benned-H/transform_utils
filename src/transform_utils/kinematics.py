@@ -213,14 +213,6 @@ class Pose3D:
         if isinstance(other, Point3D):
             return self._matrix_multiply_with_point_3d(other)
         return NotImplemented
-
-    # def __matmul__(self, other: Pose3D) -> Pose3D:
-    #     """Multiply the homogeneous transformation matrices of this pose and another pose."""
-    #     m1 = self.to_homogeneous_matrix()
-    #     m2 = other.to_homogeneous_matrix()
-    #     result_ref_frame = self.ref_frame  # Result takes the "leftmost" reference frame
-    #     return Pose3D.from_homogeneous_matrix(m1 @ m2, result_ref_frame)
-
     def inverse(self, ref_frame: str) -> Pose3D:
         """Compute the pose corresponding to the inverse transformation of this pose.
 

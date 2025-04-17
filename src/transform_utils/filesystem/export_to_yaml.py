@@ -10,7 +10,7 @@ from transform_utils.filesystem.load_from_yaml_ros import EnvironmentModel
 def output_poses_to_yaml(env: EnvironmentModel) -> str:
     """Convert the robot base poses and object poses of an environment model into a YAML string.
 
-    :param env: Environment model containing robot base poses and objects
+    :param env: Environment model containing robot base poses and object poses
     :return: String representation of the environment poses in YAML
     """
     yaml_data: dict[str, dict[str, Any]] = {"robot_base_poses": {}, "objects": {}}
