@@ -153,15 +153,44 @@ class Pose2D:
 
     @classmethod
     def from_list(cls, x_y_yaw: list[float], ref_frame: str = DEFAULT_FRAME) -> Pose2D:
-        """Construct a Pose2D from the given list of X-Y-Yaw data.
+        """Construct a Pose2D instance from the given list of X-Y-Yaw data.
 
         :param x_y_yaw: List of three floats specifying (x,y,yaw)
         :param ref_frame: Reference frame of the constructed Pose2D
-        :return: Pose2D constructed using the given values
+        :return: Constructed Pose2D instance
         """
         assert len(x_y_yaw) == 3, f"Cannot construct Pose2D from list of length {len(x_y_yaw)}."
         x, y, yaw_rad = x_y_yaw
         return Pose2D(x, y, yaw_rad, ref_frame)
+
+    def to_list(self) -> list[float]:
+        """Convert the Pose2D into a list of x, y, and yaw (radians) values."""
+        return [self.x, self.y, self.yaw_rad]
+
+    @classmethod
+    def from_yaml(cls, pose_data: list[float] | dict[str, Any], default_frame: str) -> Pose2D:
+        """Construct a Pose2D instance from data imported from YAML.
+
+        :param pose_data: YAML data representing the pose
+        :param default_frame:  Default reference frame to use if the YAML doesn't specify one
+        :return: Constructed Pose2D instance
+        """
+        if isinstance(pose_data, list):  # Pose represented as [x, y, yaw] list
+            return Pose2D.from_list(pose_data, ref_frame=default_frame)
+
+        if isinstance(pose_data, dict):  # Pose with reference frame specified
+            frame: str = pose_data.get("frame", default_frame)
+            pose_list = pose_data["x_y_yaw"]
+            return Pose2D.from_list(pose_list, ref_frame=frame)
+
+        return NotImplemented
+
+    def to_yaml_dict(self) -> dict[str, Any]:
+        """Convert the Pose2D into a dictionary suitable for export to YAML.
+
+        :return: Dictionary containing the 2D pose's data and reference frame
+        """
+        return {"x_y_yaw": self.to_list(), "frame": self.ref_frame}
 
 
 @dataclass
@@ -213,6 +242,7 @@ class Pose3D:
         if isinstance(other, Point3D):
             return self._matrix_multiply_with_point_3d(other)
         return NotImplemented
+
     def inverse(self, ref_frame: str) -> Pose3D:
         """Compute the pose corresponding to the inverse transformation of this pose.
 

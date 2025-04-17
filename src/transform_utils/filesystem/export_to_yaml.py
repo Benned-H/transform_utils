@@ -4,22 +4,25 @@ from typing import Any
 
 import yaml
 
-from transform_utils.filesystem.load_from_yaml_ros import EnvironmentModel
+from transform_utils.world_model.kinematic_state import KinematicState
 
 
-def output_poses_to_yaml(env: EnvironmentModel) -> str:
-    """Convert the robot base poses and object poses of an environment model into a YAML string.
+def output_poses_to_yaml(state: KinematicState) -> str:
+    """Convert the poses represented in the given kinematic state into a YAML string.
 
-    :param env: Environment model containing robot base poses and object poses
-    :return: String representation of the environment poses in YAML
+    Objects without a known pose are simply skipped in the YAML output.
+
+    :param state: Kinematic state including object poses and robot base poses
+    :return: String representation of the state's poses in YAML
     """
-    yaml_data: dict[str, dict[str, Any]] = {"robot_base_poses": {}, "objects": {}}
+    yaml_data: dict[str, dict[str, Any]] = {"object_poses": {}, "robot_base_poses": {}}
 
-    for robot_name, robot_base_pose in env.base_poses.items():
+    for obj_name, obj_pose in state.object_poses.items():
+        if obj_pose is None:
+            continue  # Skip objects with unknown poses
+        yaml_data["object_poses"][obj_name] = obj_pose.to_yaml_dict()
+
+    for robot_name, robot_base_pose in state.robot_base_poses.items():
         yaml_data["robot_base_poses"][robot_name] = robot_base_pose.to_yaml_dict()
-
-    for obj_name, obj_model in env.objects.items():
-        if obj_model.pose is not None:
-            yaml_data["objects"][obj_name] = obj_model.pose.to_yaml_dict()
 
     return yaml.dump(yaml_data, sort_keys=True, default_flow_style=True)
