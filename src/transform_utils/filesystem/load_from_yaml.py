@@ -65,11 +65,6 @@ def load_named_poses(poses_data: dict[str, Any], default_frame: str) -> dict[str
     named_poses: dict[str, Pose3D] = {}
 
     for name, pose_data in poses_data.items():
-        if isinstance(pose_data, list):  # Pose represented as XYZ-RPY list
-            named_poses[name] = Pose3D.from_list(pose_data, ref_frame=default_frame)
-        elif isinstance(pose_data, dict):  # Pose with reference frame specified
-            ref_frame: str = pose_data.get("frame", default_frame)
-            pose_list = pose_data["xyz_rpy"]
-            named_poses[name] = Pose3D.from_list(pose_list, ref_frame=ref_frame)
+        named_poses[name] = Pose3D.from_yaml(pose_data, default_frame=default_frame)
 
     return named_poses

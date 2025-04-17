@@ -107,7 +107,7 @@ def load_object(object_name: str, object_data: dict[str, Any]) -> ObjectModel:
             f"Could not resolve the package-relative path: {relative_mesh_path}"
         )
 
-        mesh_steps = object_data["mesh"]["steps"]  # Steps to process the mesh
+        mesh_steps = object_data["mesh"].get("steps", [])  # Steps to process the mesh
 
         loaded_trimesh = load_trimesh(mesh_path, mesh_steps)
 
