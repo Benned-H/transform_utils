@@ -68,7 +68,7 @@ class TagTracker:
 
             actual_tag = self.tag_system.tags[marker.id]
             if actual_tag.in_bundle != bundle:
-                continue  # Ensure that single-tag topics aren't applied to bundled markers
+                continue  # Ensure that single-tag detections aren't used for bundled markers
 
             rospy.loginfo(
                 f"Marker ID {marker.id} (size {actual_tag.size_cm} cm) was detected by camera "
