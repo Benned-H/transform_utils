@@ -3,29 +3,32 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import Any
 
-if TYPE_CHECKING:
-    from moveit_msgs.msg import CollisionObject
-
-    from transform_utils.kinematics import Pose3D
+from transform_utils.world_model.collision_models import CollisionModel
 
 
 @dataclass
 class ObjectModel:
-    """An object with collision geometry at some pose in the environment."""
+    """A typed object with collision geometry."""
 
-    message: CollisionObject
-    pose: Pose3D | None  # Pose of the object, or None if its pose is unknown
-    dimensions: tuple[float, float, float]  # Size in (x, y, z)
-    static: bool  # True if the object cannot move
+    name: str
+    object_type: str
+    collision_model: CollisionModel
 
-    @property
-    def name(self) -> str:
-        """Get the name of the object."""
-        return str(self.message.id)
+    @classmethod
+    def from_yaml(cls, object_name: str, object_data: dict[str, Any]) -> ObjectModel:
+        """Construct an ObjectModel instance from a dictionary of YAML data.
 
-    @property
-    def type(self) -> str:
-        """Get the type of the object."""
-        return str(self.message.type.key)
+        :param object_name: Name of the object to be imported
+        :param object_data: Dictionary of object data imported from YAML
+        :return: Constructed ObjectModel instance
+        """
+        assert "type" in object_data, f"Expected key 'type' in data for object '{object_name}'."
+        assert "mesh" in object_data or "geometry" in object_data
+
+        return ObjectModel(
+            name=object_name,
+            object_type=object_data["type"],
+            collision_model=CollisionModel.from_yaml(object_data),
+        )

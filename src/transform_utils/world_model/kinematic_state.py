@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
+from transform_utils.filesystem.load_from_yaml import load_object_poses, load_robot_base_poses
 from transform_utils.kinematics import Configuration, Pose2D, Pose3D
 
 
@@ -16,9 +18,38 @@ class KinematicState:
     """
 
     object_poses: dict[str, Pose3D | None]  # 3D poses of known objects (None if pose unknown)
-    robot_base_poses: dict[str, Pose2D]  # Base poses of robots in the world
+    robot_base_poses: dict[str, Pose3D]  # Base poses of robots in the world
     robot_configurations: dict[str, Configuration]  # Configurations of the robots in the world
     object_is_static: dict[str, bool]  # Maps object names to whether they're static (cannot move)
+
+    def __post_init__(self) -> None:
+        """Verify that any initialized kinematic state has known poses for all static objects."""
+        for obj_name, is_static in self.object_is_static.items():
+            assert obj_name in self.object_poses, f"Pose of object '{obj_name}' is missing."
+
+            if is_static:
+                assert self.object_poses[obj_name] is not None, (
+                    f"Static object '{obj_name}' has an unknown pose."
+                )
+
+    @classmethod
+    def from_yaml(cls, yaml_path: Path) -> KinematicState:
+        """Construct a KinematicState instance using data from the given YAML file.
+
+        :param yaml_path: YAML file containing data representing the kinematic state
+        :return: Constructed KinematicState instance
+        """
+        obj_poses = load_object_poses(yaml_path)
+        base_poses = load_robot_base_poses(yaml_path)
+        robot_configs = {robot_name: {} for robot_name in base_poses}  # Default: No configurations
+        static_objects = dict.fromkeys(obj_poses.keys(), True)  # Default: All objects are static
+
+        return KinematicState(
+            object_poses=obj_poses,
+            robot_base_poses=base_poses,
+            robot_configurations=robot_configs,
+            object_is_static=static_objects,
+        )
 
     def get_object_pose(self, obj_name: str) -> Pose3D | None:
         """Retrieve the pose of the named object.
@@ -52,7 +83,7 @@ class KinematicState:
 
         self.object_poses[obj_name] = new_pose
 
-    def get_robot_base_pose(self, robot_name: str) -> Pose2D:
+    def get_robot_base_pose(self, robot_name: str) -> Pose3D:
         """Retrieve the base pose of the named robot.
 
         :param robot_name: Name of a robot
@@ -65,11 +96,11 @@ class KinematicState:
 
         return self.robot_base_poses[robot_name]
 
-    def set_robot_base_pose(self, robot_name: str, new_pose: Pose2D) -> None:
+    def set_robot_base_pose(self, robot_name: str, new_pose: Pose3D) -> None:
         """Set the base pose of the named robot to the given pose.
 
         :param robot_name: Name of the robot assigned the given base pose
-        :param new_pose: New 2D base pose of the robot
+        :param new_pose: New base pose of the robot
         :raises: KeyError, if an invalid robot name is given
         """
         if robot_name not in self.robot_base_poses:

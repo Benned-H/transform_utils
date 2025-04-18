@@ -6,8 +6,8 @@ from transform_utils.kinematics import Pose3D
 
 
 @dataclass
-class PickPlanSkeleton:
-    """A skeleton for a 'Pick' manipulation plan to be recomputed online."""
+class ManipulationPlanSkeleton:
+    """A skeleton for an object-relative manipulation plan to be recomputed online."""
 
     robot_name: str  # Name of the robot to be used to execute the plan
     manipulator_name: str  # Name of the relevant manipulator
@@ -15,8 +15,8 @@ class PickPlanSkeleton:
 
 
 @dataclass
-class GoToPlanSkeleton:
-    """A skeleton for a 'GoTo' navigation plan to be recomputed online."""
+class NavigationPlanSkeleton:
+    """A skeleton for a navigation plan to be recomputed online."""
 
     robot_name: str  # Name of the robot to be used to execute the plan
     target_base_pose: Pose3D  # Target robot base pose of the navigation plan
