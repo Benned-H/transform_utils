@@ -78,6 +78,7 @@ class TransformManager:
         :param pose: Transform of the frame relative to some other frame
         """
         tf_stamped_msg = pose_to_tf_stamped_msg(pose, frame_name)
+        tf_stamped_msg.header.frame_id = pose.frame_id
         tf_stamped_msg.header.stamp = rospy.Time.now()
 
         TransformManager.tf_broadcaster().sendTransform(tf_stamped_msg)

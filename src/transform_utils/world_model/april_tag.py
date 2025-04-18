@@ -46,6 +46,7 @@ class AprilTag:
         frames = tag_data.get("relative_frames", {})  # Map from frame names to relative poses
         for child_frame_name, pose_data in frames.items():
             relative_pose = Pose3D.from_yaml(pose_data, default_frame=tag_name)
+            relative_pose.frame_id = tag_name
             output_tag.relative_frames[child_frame_name] = relative_pose
 
         return output_tag

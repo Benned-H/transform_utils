@@ -86,8 +86,10 @@ class TagTracker:
                 f"'{args.camera_name}' with confidence {marker.confidence}.",
             )
 
-            self.tag_system.tags[marker.id].pose = pose_from_msg(marker.pose)  # Update tag's pose
-
+            ps = pose_from_msg(marker.pose)
+            ps.frame_id = args.camera_name               # ←— set the parent here
+            self.tag_system.tags[marker.id].pose = ps
+            
     def _publish_frames_loop(self) -> None:
         """Publish the known AprilTags' poses (and dependent objects') frames to /tf."""
         try:
