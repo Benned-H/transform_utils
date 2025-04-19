@@ -14,12 +14,18 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">= 3.8"
 
-dependencies = ["numpy", "transforms3d", "pyyaml", "trimesh"]
+dependencies = [
+    "numpy",
+    "transforms3d",
+    "pyyaml",
+    "trimesh",
+    "fast-simplification",
+]
 
 [dependency-groups]
 lint = ["ruff"]
 tests = ["pytest", "coverage", "hypothesis"]
-types = ["mypy", "typing-extensions"]
+types = ["mypy", "typing-extensions", "types-PyYAML"]
 
 
 [tool.uv]

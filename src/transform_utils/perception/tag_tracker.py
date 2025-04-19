@@ -7,8 +7,8 @@ import rospy
 from ar_track_alvar_msgs.msg import AlvarMarkers
 
 from transform_utils.kinematics_ros import pose_from_msg
+from transform_utils.perception.april_tag import AprilTagSystem
 from transform_utils.transform_manager import TransformManager
-from transform_utils.world_model.april_tag import AprilTagSystem
 
 
 @dataclass
