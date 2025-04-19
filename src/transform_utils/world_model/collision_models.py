@@ -5,14 +5,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 import trimesh
 
+from transform_utils.logging import log_info
 from transform_utils.ros.ros_utils import resolve_package_path
 
-ObjectDims = tuple[float, float, float]  # Represents object-frame size in (x,y,z)
+ObjectDims = Tuple[float, float, float]  # Represents object-frame size in (x,y,z)
 
 
 @dataclass
@@ -45,7 +46,12 @@ class CollisionMesh:
         min_bounds, max_bounds = mesh.bounds
         dims = tuple((max_bounds - min_bounds).tolist())
 
-        return CollisionMesh(mesh=mesh, path=absolute_path, import_steps=steps, dimensions=dims)
+        return CollisionMesh(
+            mesh=mesh,
+            path=absolute_path,
+            import_steps=steps,
+            dimensions=dims,
+        )
 
 
 def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Trimesh:
@@ -62,7 +68,7 @@ def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Tri
         error = f"{mesh_path} imported as unexpected type: {type(mesh)}"
         raise TypeError(error)
 
-    mesh = mesh.convert_units("meters", guess=True)
+    # mesh = mesh.convert_units("meters", guess=False)
 
     for step in import_steps:
         (min_x, min_y, min_z), (max_x, max_y, max_z) = mesh.bounds
@@ -90,7 +96,11 @@ def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Tri
             error = f"Unknown mesh processing step: '{step}'"
             raise ValueError(error)
 
-    mesh.show()
+    # mesh.show()
+
+    log_info(f"Mesh loaded from path {mesh_path} has {len(mesh.vertices)} vertices.")
+    simple_mesh = mesh.simplify_quadric_decimation(face_count=1000, aggression=5)
+    log_info(f"Mesh after decimation has {len(simple_mesh.vertices)} vertices.")
 
     return mesh
 

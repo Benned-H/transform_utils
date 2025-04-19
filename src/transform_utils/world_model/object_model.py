@@ -27,8 +27,7 @@ class ObjectModel:
         assert "type" in object_data, f"Expected key 'type' in data for object '{object_name}'."
         assert "mesh" in object_data or "geometry" in object_data
 
-        return ObjectModel(
-            name=object_name,
-            object_type=object_data["type"],
-            collision_model=CollisionModel.from_yaml(object_data),
-        )
+        obj_type = object_data["type"]
+        collision_model = CollisionModel.from_yaml(object_data)
+
+        return ObjectModel(object_name, obj_type, collision_model)

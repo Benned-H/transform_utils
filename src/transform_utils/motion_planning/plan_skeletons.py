@@ -15,8 +15,8 @@ class ManipulationPlanSkeleton:
 
 
 @dataclass
-class NavigationPlanSkeleton:
-    """A skeleton for a navigation plan to be recomputed online."""
+class NavigateToPosePlanSkeleton:
+    """A skeleton for a navigation plan to a particular pose, to be recomputed online."""
 
     robot_name: str  # Name of the robot to be used to execute the plan
     target_base_pose: Pose3D  # Target robot base pose of the navigation plan
