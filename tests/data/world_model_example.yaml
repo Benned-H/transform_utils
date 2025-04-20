@@ -1,0 +1,20 @@
+# Example data for testing the import of WorldModel instances from YAML
+robot_base_poses:
+  spot: [3, 4, 0.5, 0, 0, -1.5708] # x, y, z, roll, pitch, yaw
+
+objects:
+  eraser1:
+    type: eraser
+    geometry:
+      type: box
+      dims: [0.04, 0.12, 0.03]
+
+object_poses:
+  eraser1:
+    xyz_rpy: [2, 3, 0.5, 0, 0, 0]
+
+known_landmarks: # Note: These numbers are completely made up
+  door_to_lab: [4, 5, 3.1416] # Robot base pose (x,y,yaw)
+  whiteboard: [4, 2, 0]
+
+default_frame: map

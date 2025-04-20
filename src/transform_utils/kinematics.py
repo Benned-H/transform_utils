@@ -202,6 +202,21 @@ class Pose3D:
     ref_frame: str = DEFAULT_FRAME  # Frame of reference for the pose
 
     @property
+    def x(self) -> float:
+        """Retrieve the x-coordinate of the Pose3D's position."""
+        return self.position.x
+
+    @property
+    def y(self) -> float:
+        """Retrieve the y-coordinate of the Pose3D's position."""
+        return self.position.y
+
+    @property
+    def z(self) -> float:
+        """Retrieve the z-coordinate of the Pose3D's position."""
+        return self.position.z
+
+    @property
     def yaw_rad(self) -> float:
         """Retrieve the Pose3D's yaw about the z-axis (in radians)."""
         _, _, yaw_rad = self.orientation.to_euler_rpy()

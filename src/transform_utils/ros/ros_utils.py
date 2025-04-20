@@ -4,8 +4,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import rospy
-from rospkg import RosPack
+from transform_utils.logging import log_info
+
+try:
+    import rospy
+    from rospkg import RosPack
+
+    ROS_PRESENT = True
+except ModuleNotFoundError:
+    ROS_PRESENT = False
 
 
 def resolve_package_path(relative_path: str) -> Path | None:
@@ -18,6 +25,10 @@ def resolve_package_path(relative_path: str) -> Path | None:
     :param relative_path: Path to a file, beginning with a ROS package
     :return: Path object containing the full absolute path (or None if path doesn't exist)
     """
+    if not ROS_PRESENT:
+        log_info(f"Cannot resolve path '{relative_path}' without ROS.")
+        return None
+
     package_name, relative_path = relative_path.split("/", maxsplit=1)
 
     rospack = RosPack()
