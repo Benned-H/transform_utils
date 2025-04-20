@@ -206,7 +206,7 @@ class CollisionPrimitive:
 
 @dataclass
 class CollisionModel:
-    """A collision model (primitive or mesh) for an object in the environment."""
+    """A collision model (primitive and/or mesh) for an object in the environment."""
 
     dimensions: ObjectDims  # Object-frame bounding box dimensions in (x, y, z), in meters
     mesh: CollisionMesh | None  # Mesh used as a collision model (optional)

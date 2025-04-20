@@ -101,7 +101,7 @@ def load_object_poses(yaml_path: Path) -> dict[str, Pose3D]:
     object_poses_data = yaml_data.get("object_poses", {})
 
     if not object_poses_data:
-        log_error(f"Expected to find the key 'object_poses_data' in YAML file: {yaml_path}")
+        log_error(f"Expected to find the key 'object_poses' in YAML file: {yaml_path}")
         return {}
 
     return {
