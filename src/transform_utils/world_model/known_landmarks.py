@@ -38,3 +38,10 @@ class KnownLandmarks2D:
         landmarks = load_named_poses_2d(landmarks_data, default_frame)
 
         return cls(landmarks=landmarks)
+
+    def to_yaml_dict(self) -> dict[str, Any]:
+        """Convert the KnownLandmarks2D into a dictionary suitable for export to YAML.
+
+        :return: Dictionary mapping landmark names to their Pose2D data
+        """
+        return {landmark: pose.to_yaml_dict() for landmark, pose in self.landmarks.items()}

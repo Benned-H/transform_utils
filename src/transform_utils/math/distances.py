@@ -48,7 +48,7 @@ def euclidean_distance_2d_m(pose_a: Pose2D | Pose3D, pose_b: Pose2D | Pose3D) ->
     if isinstance(pose_b, Pose3D):
         pose_b = pose_b.to_2d()
 
-    return np.linalg.norm(np.array([pose_a.x, pose_a.y]), np.array([pose_b.x, pose_b.y]))
+    return np.linalg.norm(np.array([pose_a.x - pose_b.x, pose_a.y - pose_b.y]))
 
 
 def absolute_yaw_error_rad(pose_a: Pose2D | Pose3D, pose_b: Pose2D | Pose3D) -> float:
