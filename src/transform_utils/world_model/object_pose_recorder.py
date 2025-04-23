@@ -1,16 +1,17 @@
-"""Record every object's first‑seen pose in the map frame to a YAML file."""
+"""Record every object's first‑seen pose in the world frame to a YAML file."""
 
 from __future__ import annotations
 import threading, yaml, rospy, tf2_ros
 from dataclasses import dataclass
 from geometry_msgs.msg import TransformStamped
 from pathlib import Path
+import tf
 
 @dataclass
 class ObjectPoseRecorder:
     tag_system:      "AprilTagSystem"
     yaml_path:       Path
-    map_frame:       str = "map"
+    world_frame:       str = "world"
     save_rate_hz:    float = 1.0          # how often we poll TF
 
     def __post_init__(self) -> None:
@@ -42,7 +43,7 @@ class ObjectPoseRecorder:
     def _try_record(self, obj_frame: str) -> None:
         try:
             t: TransformStamped = self._buffer.lookup_transform(
-                target_frame=self.map_frame,   # parent
+                target_frame=self.world_frame,   # parent
                 source_frame=obj_frame,        # child
                 time=rospy.Time(0),            # latest
                 timeout=rospy.Duration(0.3),
@@ -52,19 +53,28 @@ class ObjectPoseRecorder:
                 tf2_ros.ExtrapolationException):
             return                            # transform not (yet) available
 
+        # Convert to roll, pitch, yaw (in radians)
+        roll, pitch, yaw = tf.transformations.euler_from_quaternion([t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w])
+
         pose_dict = {
             "position": {
                 "x": t.transform.translation.x,
                 "y": t.transform.translation.y,
                 "z": t.transform.translation.z,
             },
-            "orientation": {
+            "orientation_quaternion": {
                 "x": t.transform.rotation.x,
                 "y": t.transform.rotation.y,
                 "z": t.transform.rotation.z,
                 "w": t.transform.rotation.w,
             },
+            "orientation_rpy": {
+                "roll": roll,
+                "pitch": pitch,
+                "yaw": yaw,
+            }
         }
+
         self._known[obj_frame] = pose_dict
         self._save_yaml()
 

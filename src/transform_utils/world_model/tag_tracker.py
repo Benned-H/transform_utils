@@ -38,7 +38,7 @@ class TagTracker:
 
                 self.marker_subs.append(
                     rospy.Subscriber(
-                        f"{self.tag_system.camera_topic_prefix}/{camera_name}/single",
+                        f"{self.tag_system.camera_topic_prefix}/single",
                         AlvarMarkers,
                         callback=self.marker_callback,
                         callback_args=callback_args,
@@ -51,7 +51,7 @@ class TagTracker:
 
                 self.marker_subs.append(
                     rospy.Subscriber(
-                        f"{self.tag_system.camera_topic_prefix}/{camera_name}/bundle",
+                        f"{self.tag_system.camera_topic_prefix}/bundle",
                         AlvarMarkers,
                         callback=self.marker_callback,
                         callback_args=callback_args,
@@ -89,7 +89,7 @@ class TagTracker:
             ps = pose_from_msg(marker.pose)
             ps.frame_id = args.camera_name               # ←— set the parent here
             self.tag_system.tags[marker.id].pose = ps
-            
+
     def _publish_frames_loop(self) -> None:
         """Publish the known AprilTags' poses (and dependent objects') frames to /tf."""
         try:
