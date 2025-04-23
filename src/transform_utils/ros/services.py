@@ -68,6 +68,8 @@ class WaitForServiceTrigger:
         while self.keep_looping:
             rate_hz.sleep()
 
+        rospy.loginfo(f"Service '{topic_name}' has been called, done waiting...")
+
     def handle_trigger(self, _: TriggerRequest) -> TriggerResponse:
         """Handle a request to break from the class loop."""
         self.keep_looping = False
