@@ -8,6 +8,7 @@ import yaml
 
 from transform_utils.kinematics import DEFAULT_FRAME, Pose2D, Pose3D
 from transform_utils.logging import log_error, log_info
+from transform_utils.world_model.collision_models import CollisionMesh
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -128,3 +129,23 @@ def load_robot_base_poses(yaml_path: Path) -> dict[str, Pose3D]:
         robot_name: Pose3D.from_yaml(pose_data, default_frame)
         for (robot_name, pose_data) in base_poses_data.items()
     }
+
+
+def load_named_mesh(mesh_key: str, yaml_path: Path) -> CollisionMesh | None:
+    """Load the specified mesh from the given YAML file.
+
+    :param mesh_key: YAML key used to access the imported mesh
+    :param yaml_path: Path to a YAML file specifying a mesh path and import steps
+    :return: Constructed CollisionMesh instance, or None if import fails
+    """
+    yaml_data = load_yaml_into_dict(yaml_path)
+    if "meshes" not in yaml_data:
+        log_error(f"Expected key 'meshes' in YAML file {yaml_path}")
+        return None
+
+    mesh_data = yaml_data["meshes"].get(mesh_key)
+    if mesh_data is None:
+        log_error(f"Could not find mesh '{mesh_key}' in file {yaml_path}")
+        return None
+
+    return CollisionMesh.from_yaml(mesh_data)
