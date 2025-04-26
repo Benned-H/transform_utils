@@ -1,8 +1,10 @@
 """Define dataclasses to represent skeletons of motion plans to be recomputed online."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
-from transform_utils.kinematics import Pose3D
+from transform_utils.kinematics import Configuration, Pose3D
 
 
 @dataclass
@@ -11,7 +13,7 @@ class ManipulationPlanSkeleton:
 
     robot_name: str  # Name of the robot to be used to execute the plan
     manipulator_name: str  # Name of the relevant manipulator
-    target_pose_o_ee: Pose3D  # Target end-effector pose in the object frame
+    target: Pose3D | Configuration  # Target end-effector pose w.r.t. object (or full-arm config.)
 
 
 @dataclass
