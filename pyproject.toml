@@ -46,6 +46,7 @@ ignore = [
     "D203",   # No blank line between class definition and its docstring
     "D213",   # Place docstring summary immediately after the opening quotes
     "TRY003", # Permit defining exception messages at point of raising
+    "EM101",  # Don't care about duplicate error messages in tracebacks
 ]
 unfixable = ["F401"] # Disable 'fix' for unused imports
 
