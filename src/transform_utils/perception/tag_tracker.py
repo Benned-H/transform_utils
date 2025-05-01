@@ -9,10 +9,11 @@ from pathlib import Path
 import rospy
 import yaml
 from ar_track_alvar_msgs.msg import AlvarMarkers
+from pose_estimation_msgs.msg import PoseEstimate
 from std_srvs.srv import Trigger, TriggerRequest, TriggerResponse
 
 from transform_utils.kinematics import DEFAULT_FRAME
-from transform_utils.kinematics_ros import pose_from_msg
+from transform_utils.kinematics_ros import pose_from_msg, pose_to_stamped_msg
 from transform_utils.perception.april_tag import AprilTagSystem
 from transform_utils.perception.pose_estimate import AveragedPoseEstimate3D
 from transform_utils.transform_manager import TransformManager
@@ -70,6 +71,8 @@ class TagTracker:
                     queue_size=5,
                 )
                 self.marker_subs.append(bundle_sub)
+
+        self.pose_pub = rospy.Publisher("/estimated_object_poses", PoseEstimate, queue_size=10)
 
         self._output_srv = rospy.Service("~output_to_yaml", Trigger, self.handle_output_to_yaml)
 
@@ -149,6 +152,7 @@ class TagTracker:
         """Continuously broadcast averaged tag and object frames to /tf."""
         rate_hz = rospy.Rate(TransformManager.loop_hz)
         try:
+            pose_est_msg = PoseEstimate()
             while not rospy.is_shutdown():
                 for tag in self.tag_system.tags.values():
                     avg_pose = self._estimators[tag.id].pose
@@ -157,6 +161,13 @@ class TagTracker:
 
                         for obj_name, relative_pose in tag.relative_frames.items():
                             TransformManager.broadcast_transform(obj_name, relative_pose)
+
+                            pose_est_msg.object_name = obj_name
+                            pose_est_msg.pose = pose_to_stamped_msg(relative_pose)
+                            pose_est_msg.confidence = 0.0
+
+                            self.pose_pub.publish(pose_est_msg)
+
                 rate_hz.sleep()
 
         except rospy.ROSInterruptException as ros_exc:
