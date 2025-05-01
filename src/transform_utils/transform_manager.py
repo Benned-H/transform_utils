@@ -45,6 +45,13 @@ class TransformManager:
 
         :return: Transform broadcaster used to send transforms to the TF2 server
         """
+        # Make sure to initialize the node before creating the broadcaster
+        if rospy.get_name() in ["", "/unnamed"]:
+            rospy.init_node("transform_manager")
+            rospy.loginfo(f"Initialized node with name '{rospy.get_name()}'")
+
+        TransformManager.tf_listener()  # Ensure transform listener is initialized
+
         if TransformManager._tf_broadcaster is None:
             TransformManager._tf_broadcaster = TransformBroadcaster()
         return TransformManager._tf_broadcaster
@@ -87,7 +94,7 @@ class TransformManager:
         source_frame: str,
         target_frame: str,
         when: rospy.Time | None = None,
-        timeout_s: float = 5.0,
+        timeout_s: float = 3.0,
     ) -> Pose3D | None:
         """Look up the transform to convert from one frame to another using /tf.
 
@@ -101,7 +108,7 @@ class TransformManager:
         :param source_frame: Frame where the data originated
         :param target_frame: Frame to which the data will be transformed
         :param when: Timestamp at which the relative transform is found (defaults to 'now')
-        :param timeout_s: Duration (seconds) after which to abandon the lookup (defaults to 5)
+        :param timeout_s: Duration (seconds) after which to abandon the lookup (defaults to 3 sec)
         :return: Pose3D representing transform (i.e., transform_t_s) or None (if lookup failed)
         """
         if when is None:
@@ -147,14 +154,14 @@ class TransformManager:
         return pose_t_s
 
     @staticmethod
-    def convert_to_frame(pose_c_p: Pose2D | Pose3D, new_ref_frame: str) -> Pose3D:
+    def convert_to_frame(pose_c_p: Pose2D | Pose3D, new_ref_frame: str) -> Pose3D | None:
         """Convert the given pose into a new reference frame.
 
         Frames: Frame implied by the pose (p), current ref. frame (c), new ref. frame (n)
 
         :param pose_c_p: Pose (frame p) w.r.t. its current reference frame (frame c)
         :param new_ref_frame: New reference frame (frame n) of the returned pose
-        :return: Pose3D relative to the new reference frame (i.e., pose_n_p)
+        :return: Pose3D relative to the new frame (i.e., pose_n_p), or None if /tf lookup fails
         """
         if isinstance(pose_c_p, Pose2D):
             pose_c_p = Pose3D.from_2d(pose_c_p)
@@ -163,6 +170,11 @@ class TransformManager:
             return pose_c_p
 
         now = rospy.Time.now()
-        pose_n_c = TransformManager.lookup_transform(pose_c_p.ref_frame, new_ref_frame, now, 60.0)
+        pose_n_c = TransformManager.lookup_transform(pose_c_p.ref_frame, new_ref_frame, now)
+
+        if pose_n_c is None:  # Try once more if lookup fails
+            pose_n_c = TransformManager.lookup_transform(pose_c_p.ref_frame, new_ref_frame, now)
+            if pose_n_c is None:
+                return None
 
         return pose_n_c @ pose_c_p

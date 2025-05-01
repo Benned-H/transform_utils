@@ -14,12 +14,18 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">= 3.8"
 
-dependencies = ["numpy", "transforms3d", "pyyaml", "trimesh"]
+dependencies = [
+    "numpy",
+    "transforms3d",
+    "pyyaml",
+    "trimesh",
+    "fast-simplification",
+]
 
 [dependency-groups]
 lint = ["ruff"]
 tests = ["pytest", "coverage", "hypothesis"]
-types = ["mypy", "typing-extensions"]
+types = ["mypy", "typing-extensions", "types-PyYAML"]
 
 
 [tool.uv]
@@ -40,6 +46,7 @@ ignore = [
     "D203",   # No blank line between class definition and its docstring
     "D213",   # Place docstring summary immediately after the opening quotes
     "TRY003", # Permit defining exception messages at point of raising
+    "EM101",  # Don't care about duplicate error messages in tracebacks
 ]
 unfixable = ["F401"] # Disable 'fix' for unused imports
 
