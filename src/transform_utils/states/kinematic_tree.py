@@ -66,7 +66,7 @@ class KinematicTree:
         return {r_name: self.frames[f"{r_name}_base_pose"] for r_name in self.robot_names}
 
     def get_parent_frame(self, child_frame: str) -> str | None:
-        """Retrieve the name of the parent frame of a frame.
+        """Retrieve the parent frame of the given child frame.
 
         :param child_frame: Frame whose parent frame is retrieved
         :return: Name of the relative frame of the child frame (None if parent frame is unknown)
@@ -111,7 +111,7 @@ class KinematicTree:
         """Retrieve the pose of the named object.
 
         :param obj_name: Name of an object in the world
-        :return: Pose of the object (if pose is known), or None (if pose is unknown)
+        :return: Pose of the object
         :raises: KeyError, if an invalid object name is given
         """
         if obj_name not in self.object_names or obj_name not in self.frames:
