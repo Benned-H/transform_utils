@@ -39,11 +39,3 @@ class Landmarks2D(dict[str, Pose2D]):
         :return: Dictionary mapping landmark names to their Pose2D data
         """
         return {landmark: pose.to_yaml_dict() for landmark, pose in self.items()}
-
-    def get_landmark(self, landmark: str) -> Pose2D | None:
-        """Retrieve a landmark by name.
-
-        :param landmark: Name of a known landmark
-        :return: 2D pose of the landmark, or None if the name is unknown
-        """
-        return self.get(landmark)

@@ -29,10 +29,9 @@ class KinematicTree:
         self.robot_names: set[str] = set()  # Base pose frame names: f"{robot_name}_base_pose"
 
         # Store robot configurations to represent actuated joints in the kinematic tree
-        self.robot_configs: dict[str, Configuration]  # Configurations of robots in the world
+        self.robot_configs: dict[str, Configuration] = {}
 
-        # Store 2D landmarks used as navigation waypoints
-        self.landmarks: Landmarks2D = Landmarks2D()
+        self.landmarks: Landmarks2D = Landmarks2D()  # Store navigation waypoints as 2D landmarks
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> KinematicTree:

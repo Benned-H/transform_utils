@@ -82,7 +82,7 @@ class TagTracker:
         self._tf_publisher_thread.start()
 
     def marker_callback(self, markers_msg: AlvarMarkers, args: MarkerCallbackArgs) -> None:
-        """Update pose estimates based on AR marker detections from the named camera.
+        """Update pose estimates based on AR marker detections.
 
         :param markers_msg: Message containing a list of tag detections
         :param args: Data structure organizing arguments to the callback
