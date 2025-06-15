@@ -8,7 +8,7 @@ import yaml
 
 from transform_utils.kinematics import DEFAULT_FRAME, Pose2D, Pose3D
 from transform_utils.logging import log_error, log_info
-from transform_utils.world_model.collision_models import CollisionMesh
+from transform_utils.states.collision_models import CollisionMesh
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -69,26 +69,6 @@ def load_named_poses(poses_data: dict[str, Any], default_frame: str) -> dict[str
         named_poses[name] = Pose3D.from_yaml(pose_data, default_frame=default_frame)
 
     return named_poses
-
-
-def load_known_landmarks(yaml_path: Path) -> dict[str, Pose2D]:
-    """Load landmark poses from the given YAML file.
-
-    :param yaml_path: Path to a YAML file containing landmark pose data
-    :return: Dictionary mapping landmark names to their imported 2D poses
-    """
-    yaml_data = load_yaml_into_dict(yaml_path)
-    default_frame = yaml_data.get("default_frame", DEFAULT_FRAME)
-    landmarks_data = yaml_data.get("known_landmarks", {})
-
-    if not landmarks_data:
-        log_error(f"Expected to find the key 'known_landmarks' in YAML file: {yaml_path}")
-        return {}
-
-    return {
-        landmark_name: Pose2D.from_yaml(pose_data, default_frame)
-        for (landmark_name, pose_data) in landmarks_data.items()
-    }
 
 
 def load_object_poses(yaml_path: Path) -> dict[str, Pose3D]:

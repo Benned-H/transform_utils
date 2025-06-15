@@ -1,8 +1,7 @@
-"""Define a dataclass representing a set of named 2D landmarks."""
+"""Define a class representing a set of named 2D landmarks."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from transform_utils.filesystem.load_from_yaml import load_named_poses_2d, load_yaml_into_dict
@@ -12,22 +11,19 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-@dataclass
-class KnownLandmarks2D:
+class Landmarks2D(dict[str, Pose2D]):
     """A collection of named landmarks at known 2D poses."""
 
-    landmarks: dict[str, Pose2D]
-
     @classmethod
-    def from_yaml(cls, yaml_path: Path) -> KnownLandmarks2D:
-        """Construct a KnownLandmarks2D instance from a YAML file.
+    def from_yaml(cls, yaml_path: Path) -> Landmarks2D:
+        """Construct a Landmarks2D instance from a YAML file.
 
         Note: The YAML file is expected to contain a "known_landmarks" key whose value is a list
             of landmark specifications (i.e., name mapped to a list representing a 2D pose), and
-            an optional "default_frame" key whose value is the default frame used for the 2D poses.
+            an optional "default_frame" key whose value is the default frame for the 2D poses.
 
         :param yaml_path: Path to a YAML file containing landmarks data
-        :return: Constructed KnownLandmarks2D instance
+        :return: Constructed Landmarks2D instance
         """
         yaml_data: dict[str, Any] = load_yaml_into_dict(yaml_path)
 
@@ -35,16 +31,14 @@ class KnownLandmarks2D:
         landmarks_data = yaml_data.get("known_landmarks", {})
         default_frame = yaml_data.get("default_frame", DEFAULT_FRAME)
 
-        landmarks = load_named_poses_2d(landmarks_data, default_frame)
-
-        return cls(landmarks=landmarks)
+        return Landmarks2D(load_named_poses_2d(landmarks_data, default_frame))
 
     def to_yaml_dict(self) -> dict[str, Any]:
-        """Convert the KnownLandmarks2D into a dictionary suitable for export to YAML.
+        """Convert the Landmarks2D into a dictionary suitable for export to YAML.
 
         :return: Dictionary mapping landmark names to their Pose2D data
         """
-        return {landmark: pose.to_yaml_dict() for landmark, pose in self.landmarks.items()}
+        return {landmark: pose.to_yaml_dict() for landmark, pose in self.items()}
 
     def get_landmark(self, landmark: str) -> Pose2D | None:
         """Retrieve a landmark by name.
@@ -52,4 +46,4 @@ class KnownLandmarks2D:
         :param landmark: Name of a known landmark
         :return: 2D pose of the landmark, or None if the name is unknown
         """
-        return self.landmarks.get(landmark)
+        return self.get(landmark)

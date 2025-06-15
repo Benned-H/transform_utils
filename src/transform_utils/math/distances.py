@@ -73,12 +73,10 @@ def compute_distances_to_others_m(pose_idx: int, poses: Sequence[Pose3D]) -> lis
     :raises ValueError: If fewer than 2 poses are provided or `pose_idx` is out of range
     """
     if len(poses) < 2:
-        error_msg = f"Need at least 2 poses to compute distances, got {len(poses)}."
-        raise ValueError(error_msg)
+        raise ValueError(f"Cannot compute distances with only {len(poses)} poses.")
 
     if not (0 <= pose_idx < len(poses)):
-        error_msg = f"Index {pose_idx} out of range for poses sequence of length {len(poses)}."
-        raise ValueError(error_msg)
+        raise ValueError(f"Index {pose_idx} out of range for sequence of length {len(poses)}.")
 
     origin = poses[pose_idx].position.to_array()
     distances = []
@@ -96,8 +94,7 @@ def identify_worst_outlier(poses: Sequence[Pose3D]) -> int:
     :raises ValueError: If `poses` is empty
     """
     if not poses:
-        error_msg = "Cannot identify an outlier from zero poses."
-        raise ValueError(error_msg)
+        raise ValueError("Cannot identify an outlier from zero poses.")
 
     worst_idx = 0
     worst_avg_dist_m = -1.0

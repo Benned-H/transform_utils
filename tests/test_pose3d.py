@@ -13,8 +13,8 @@ from transform_utils.kinematics import DEFAULT_FRAME, Pose3D
 
 @pytest.fixture
 def poses_yaml_data() -> dict[str, Any]:
-    """Return pose data imported from a known-good YAML file stored under `tests/data`."""
-    yaml_path = Path(__file__).parent / "data" / "pose_examples.yaml"
+    """Return pose data imported from a known-good YAML file stored in `tests/yaml_examples`."""
+    yaml_path = Path(__file__).parent / "yaml_examples" / "pose_examples.yaml"
     assert yaml_path.exists(), f"Cannot find the YAML file: {yaml_path}"
 
     yaml_data: dict[str, Any] = load_yaml_into_dict(yaml_path)
@@ -45,7 +45,7 @@ def test_pose3d_from_yaml(poses_yaml_data: dict[str, Any]) -> None:
     # Assert: Verify that the loaded Pose3D instances match the expected values
     for pose_name, expected_pose in expected_poses.items():
         result_pose = loaded_poses.get(pose_name)
-        assert result_pose is not None, f"Expected a pose named '{pose_name}'."
+        assert result_pose is not None, f"Expected a pose loaded from YAML named '{pose_name}'."
 
         assert result_pose.approx_equal(expected_pose)
         assert result_pose.ref_frame == expected_pose.ref_frame

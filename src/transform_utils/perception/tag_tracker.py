@@ -91,8 +91,9 @@ class TagTracker:
             rospy.logwarn(f"Unrecognized camera name: '{args.camera_name}'.")
             return
 
+        camera_tags = self.tag_system.camera_detects_tags[args.camera_name]
+
         for marker in markers_msg.markers:
-            camera_tags = self.tag_system.camera_detects_tags[args.camera_name]
             if marker.id not in camera_tags:
                 continue  # Camera doesn't detect this tag; move to next detection
 
@@ -116,8 +117,7 @@ class TagTracker:
             if estimator is None:
                 continue
             estimator.update(pose_w_t)
-            avg_pose = estimator.pose
-            tag.pose = avg_pose  # None if not enough data yet
+            tag.pose = estimator.pose  # None if not enough data yet
 
     def handle_output_to_yaml(self, _: TriggerRequest) -> TriggerResponse:
         """Dump the current estimated object poses to YAML.

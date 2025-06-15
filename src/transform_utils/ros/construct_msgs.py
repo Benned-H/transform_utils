@@ -7,34 +7,33 @@ from moveit_msgs.msg import CollisionObject
 
 from transform_utils.kinematics import Pose3D
 from transform_utils.kinematics_ros import pose_to_msg
-from transform_utils.world_model.collision_models import CollisionPrimitive
-from transform_utils.world_model.object_model import ObjectModel
+from transform_utils.states.collision_models import CollisionPrimitive
+from transform_utils.states.object_state import ObjectState
 
 
-def make_collision_object_msg(obj_model: ObjectModel, pose: Pose3D) -> CollisionObject:
+def make_collision_object_msg(object_state: ObjectState) -> CollisionObject:
     """Construct a moveit_msgs/CollisionObject message using the given data.
 
-    :param obj_model: Object model specifying typing and collision information
-    :param pose: Pose associated with the object model
+    :param object_state: Object model specifying the object's state
     :return: Constructed moveit_msgs/CollisionObject message
     """
     msg = CollisionObject()
-    msg.header.frame_id = pose.ref_frame
-    msg.pose = pose_to_msg(pose)
+    msg.header.frame_id = object_state.pose.ref_frame
+    msg.pose = pose_to_msg(object_state.pose)
 
-    msg.id = obj_model.name
-    msg.type.key = obj_model.object_type  # Ignore 'db' field of message
+    msg.id = object_state.name
+    msg.type.key = object_state.object_type  # Ignore 'db' field of message
 
-    if obj_model.collision_model.mesh is not None:
-        msg.meshes.append(trimesh_to_msg(obj_model.collision_model.mesh.mesh))
+    if object_state.collision_model.mesh is not None:
+        msg.meshes.append(trimesh_to_msg(object_state.collision_model.mesh.mesh))
         msg.mesh_poses.append(geometry_msgs.msg.Pose())
 
-    if obj_model.collision_model.primitive is not None:
-        msg.primitives.append(collision_primitive_to_msg(obj_model.collision_model.primitive))
+    if object_state.collision_model.primitive is not None:
+        msg.primitives.append(collision_primitive_to_msg(object_state.collision_model.primitive))
 
         # SolidPrimitive messages place their geometry centered at the origin of the frame,
         #   whereas we want the object's frame (o) at the bottom of the geometry (g)
-        height_m = obj_model.collision_model.primitive.dimensions[2]
+        height_m = object_state.collision_model.primitive.dimensions[2]
         pose_o_g = Pose3D.from_xyz_rpy(z=height_m / 2.0)
         msg.primitive_poses.append(pose_to_msg(pose_o_g))
 

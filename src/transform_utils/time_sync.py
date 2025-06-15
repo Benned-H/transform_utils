@@ -223,7 +223,7 @@ class TimeSync(ABC):
 
         return None if local_ts is None else ROSTime.from_sec(local_ts.to_time_s())
 
-    def get_future_margin_s(self) -> TimestampProto | None:
+    def get_future_margin_s(self) -> float | None:
         """Compute a safe margin (in seconds) to send commands early to Spot.
 
         :return: Duration (seconds) reflecting observed round-trip times

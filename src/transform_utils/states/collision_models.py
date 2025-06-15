@@ -102,7 +102,7 @@ def load_trimesh(mesh_path: Path, import_steps: list[str | dict]) -> trimesh.Tri
     simple_mesh = mesh.simplify_quadric_decimation(face_count=1000, aggression=5)
     log_info(f"Mesh after decimation has {len(simple_mesh.vertices)} vertices.")
 
-    return mesh
+    return simple_mesh
 
 
 class ShapeType(Enum):

@@ -45,12 +45,7 @@ class TransformManager:
 
         :return: Transform broadcaster used to send transforms to the TF2 server
         """
-        # Make sure to initialize the node before creating the broadcaster
-        if rospy.get_name() in ["", "/unnamed"]:
-            rospy.init_node("transform_manager")
-            rospy.loginfo(f"Initialized node with name '{rospy.get_name()}'")
-
-        TransformManager.tf_listener()  # Ensure transform listener is initialized
+        TransformManager.init_node()  # Ensure the node is initialized before the broadcaster
 
         if TransformManager._tf_broadcaster is None:
             TransformManager._tf_broadcaster = TransformBroadcaster()
