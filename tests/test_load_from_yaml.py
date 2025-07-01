@@ -1,9 +1,7 @@
-"""Define unit tests for utility functions for loading data from YAML."""
+"""Unit tests for utility functions for loading data from YAML."""
 
 import tempfile
 from pathlib import Path
-
-import pytest
 
 from transform_utils.filesystem.load_from_yaml import load_yaml_into_dict
 

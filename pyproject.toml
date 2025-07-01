@@ -17,7 +17,7 @@ requires-python = ">= 3.8"
 dependencies = [
     "numpy",
     "transforms3d",
-    "pyyaml",
+    "PyYAML",
     "trimesh",
     "fast-simplification",
 ]
@@ -46,7 +46,8 @@ ignore = [
     "D203",   # No blank line between class definition and its docstring
     "D213",   # Place docstring summary immediately after the opening quotes
     "TRY003", # Permit defining exception messages at point of raising
-    "EM101",  # Don't care about duplicate error messages in tracebacks
+    "EM101",
+    "EM102",  # Don't care about duplicate error messages in tracebacks
 ]
 unfixable = ["F401"] # Disable 'fix' for unused imports
 
