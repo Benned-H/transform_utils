@@ -26,7 +26,7 @@ class AveragedPoseEstimate3D:
     def __init__(self, max_estimates: int | None = None) -> None:
         """Initialize the averaged pose estimate.
 
-        :param max_estimates: Maximum number of estimates to retain (None for unlimited).
+        :param max_estimates: Maximum number of estimates to retain (None for unlimited)
         """
         self.max_estimates: int | None = max_estimates
         self._estimates: list[PoseEstimate3D] = []
