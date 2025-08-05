@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from transform_utils.kinematics import Pose3D
-from transform_utils.world_model.april_tag import AprilTagSystem
+from transform_utils.perception.april_tag import AprilTagSystem
 
 
 @pytest.fixture
